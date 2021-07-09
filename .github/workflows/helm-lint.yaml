@@ -2,12 +2,12 @@
 name: Lint Charts
 
 on:
-  push:
-    tags:
-      - v*
-    branches:
-      - master
-      - release-*
+  # push:
+  #   tags:
+  #     - v*
+  #   branches:
+  #     - master
+  #     - release-*
   pull_request:
     branches:
       - master

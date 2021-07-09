@@ -12,18 +12,18 @@ function  build() {
     build/run make mod.check
 }
 
-if [[ ${BRANCH_NAME} =~ release- ]]; then
+if [[ ${BRANCH_NAME} =~ release-|tag ]]; then
     build
     build/run make -C build/release build BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=true GIT_API_TOKEN=${GIT_API_TOKEN}
     git status &
     git diff &
-    build/run make -C build/release publish BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=true AWS_ACCESS_KEY_ID=${AWS_USR} AWS_SECRET_ACCESS_KEY=${AWS_PSW} GIT_API_TOKEN=${GIT_API_TOKEN}
-elif [[ ${BRANCH_NAME} =~ master|tag ]]; then
+    build/run make -C build/release publish BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=true  GIT_API_TOKEN=${GIT_API_TOKEN}
+elif [[ ${BRANCH_NAME} =~ master ]]; then
     build
     build/run make -C build/release build BRANCH_NAME=${BRANCH_NAME}  GIT_API_TOKEN=${GIT_API_TOKEN}
     git status &
     git diff &
-    build/run make -C build/release publish BRANCH_NAME=${BRANCH_NAME} AWS_ACCESS_KEY_ID=${AWS_USR} AWS_SECRET_ACCESS_KEY=${AWS_PSW} GIT_API_TOKEN=${GIT_API_TOKEN}
+    build/run make -C build/release publish BRANCH_NAME=${BRANCH_NAME}  GIT_API_TOKEN=${GIT_API_TOKEN}
     # automatically promote the master builds
-    build/run make -C build/release promote BRANCH_NAME=master CHANNEL=master AWS_ACCESS_KEY_ID=${AWS_USR} AWS_SECRET_ACCESS_KEY=${AWS_PSW}           
+    build/run make -C build/release promote BRANCH_NAME=master CHANNEL=master
 fi

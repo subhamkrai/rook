@@ -1,11 +1,11 @@
 name: Codespell
 on:
-  push:
-    tags:
-      - v*
-    branches:
-      - master
-      - release-*
+  # push:
+  #   tags:
+  #     - v*
+  #   branches:
+  #     - master
+  #     - release-*
   pull_request:
     branches:
       - master

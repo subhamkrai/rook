@@ -1,11 +1,11 @@
 name: Canary integration tests
 on:
-  push:
-    tags:
-      - v*
-    branches:
-      - master
-      - release-*
+  # push:
+  #   tags:
+  #     - v*
+  #   branches:
+  #     - master
+  #     - release-*
   pull_request:
     branches:
       - master

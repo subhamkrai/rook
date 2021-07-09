@@ -1,11 +1,11 @@
 name: Integration tests on master/release
-on:
-  push:
-    tags:
-      - v*
-    branches:
-      - master
-      - release-*
+# on:
+#   # push:
+#   #   tags:
+#   #     - v*
+#   #   branches:
+#   #     - master
+#   #     - release-*
 
 defaults:
   run:

@@ -1,6 +1,8 @@
 name: Push Image Build
 on:
   push:
+    tags:
+      - v*
     branches:
       - master
 
@@ -12,8 +14,17 @@ defaults:
 jobs:
   push-image-to-container-registry:
     runs-on: ubuntu-18.04
-    if: github.repository == 'rook/rook'
+    if: github.repository == 'subhamkrai/rook'
     steps:
+      - name: check permission
+        env:
+          ADMIN: ${{ secrets.ADMIN }}
+        run: |
+          if [[ ${ADMIN} != ${{ github.actor}} ]]; then
+          echo "not authozised to run this"
+          exit 1
+          fi
+
       - name: checkout
         uses: actions/checkout@v2
 
@@ -29,24 +40,28 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_USR }}
-          aws-secret-access-key: ${{ secrets.AWS_PSW }}
-          aws-region: us-east-1
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_USR }}
+      #     aws-secret-access-key: ${{ secrets.AWS_PSW }}
+      #     aws-region: us-east-1
 
       - name: unshallow
-        run: git fetch --prune --unshallow --tags
+        run: git fetch --prune --unshallow --tags --force
 
       # creating custom env var
       - name: set env
-        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=release-1.6.8" >> $GITHUB_ENV
 
       - name: build and release
         env:
           GIT_API_TOKEN: ${{ secrets.GIT_API_TOKEN }}
           BRANCH_NAME: ${{ env.BRANCH_NAME }}
-          AWS_USR: ${{ secrets.AWS_USR }}
-          AWS_PSW: ${{ secrets.AWS_PSW }}
+          # AWS_USR: ${{ secrets.AWS_USR }}
+          # AWS_PSW: ${{ secrets.AWS_PSW }}
         run: tests/scripts/build-release.sh
+
+      # - name: setup tmate session for debugging
+      #   if: failure()
+      #   uses: mxschmitt/action-tmate@v3
