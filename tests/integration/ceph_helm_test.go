@@ -66,11 +66,12 @@ func (h *HelmSuite) SetupSuite() {
 		UsePVC:                    false,
 		Mons:                      1,
 		SkipOSDCreation:           false,
-		EnableAdmissionController: false,
+		EnableAdmissionController: true,
 		EnableDiscovery:           true,
 		ChangeHostName:            true,
+		ConnectionsEncrypted:      true,
 		RookVersion:               installer.LocalBuildTag,
-		CephVersion:               installer.OctopusVersion,
+		CephVersion:               installer.PacificVersion,
 	}
 	h.settings.ApplyEnvVars()
 	h.installer, h.k8shelper = StartTestCluster(h.T, h.settings)

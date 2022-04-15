@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
-# deploy_admission_controller.sh
-# Sets up the environment for the admission controller webhook in the active cluster.
+# Sets up the cert-manager for CI
 set -eEo pipefail
-
-function cleanup() {
-  set +e
-  kubectl -n rook-ceph delete validatingwebhookconfigurations "$WEBHOOK_CONFIG_NAME"
-  kubectl -n rook-ceph delete certificate rook-admission-controller-cert
-  kubectl -n rook-ceph delete issuers selfsigned-issuer
-  kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/"$CERT_VERSION"/cert-manager.yaml
-  set -e
-}
 
 function error_log() {
   set +e -x
@@ -23,10 +13,8 @@ function error_log() {
   kubectl -n cert-manager logs deploy/cert-manager-webhook --tail=10
   kubectl -n cert-manager logs deploy/cert-manager-cainjector --tail=10
  set -e +x
- cleanup
 }
 
-trap cleanup SIGINT
 trap error_log ERR
 
 # Minimum 1.16.0 kubernetes version is required to start the admission controller
@@ -80,40 +68,3 @@ timeout 25 bash <<-'EOF'
 EOF
 
 echo "Successfully deployed cert-manager"
-
-echo "Creating Issuer and Certificate"
-cat <<EOF | kubectl create -f -
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: selfsigned-issuer
-  namespace: ${NAMESPACE}
-spec:
-  selfSigned: {}
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: rook-admission-controller-cert
-  namespace: ${NAMESPACE}
-spec:
-  dnsNames:
-  - ${SERVICE_NAME}
-  - ${SERVICE_NAME}.${NAMESPACE}.svc
-  - ${SERVICE_NAME}.${NAMESPACE}.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: selfsigned-issuer
-  secretName: rook-ceph-admission-controller
-EOF
-
-echo "Successfully created Issuer and Certificate"
-
-echo "Deploying webhook config"
-< "${BASE_DIR}"/webhook-config.yaml \
-        "${BASE_DIR}"/webhook-patch-ca-bundle.sh | \
-        sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
-        sed -e "s|\${WEBHOOK_CONFIG_NAME}|${WEBHOOK_CONFIG_NAME}|g" | \
-        sed -e "s|\${SERVICE_NAME}|${SERVICE_NAME}|g" | \
-        kubectl create -f -
-echo "Webhook deployed! Please start the rook operator to create the service and admission controller pods"

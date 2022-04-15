@@ -270,7 +270,7 @@ func validateStart(t *testing.T, c *Cluster) {
 func TestPersistMons(t *testing.T) {
 	clientset := test.New(t, 1)
 	ownerInfo := cephclient.NewMinimumOwnerInfoWithOwnerRef()
-	c := New(&clusterd.Context{Clientset: clientset}, "ns", cephv1.ClusterSpec{Annotations: cephv1.AnnotationsSpec{cephv1.KeyClusterMetadata: cephv1.Annotations{"key": "value"}}}, ownerInfo)
+	c := New(context.TODO(), &clusterd.Context{Clientset: clientset}, "ns", cephv1.ClusterSpec{Annotations: cephv1.AnnotationsSpec{cephv1.KeyClusterMetadata: cephv1.Annotations{"key": "value"}}}, ownerInfo)
 	setCommonMonProperties(c, 1, cephv1.MonSpec{Count: 3, AllowMultiplePerNode: true}, "myversion")
 
 	// Persist mon a
@@ -279,7 +279,7 @@ func TestPersistMons(t *testing.T) {
 
 	cm, err := c.context.Clientset.CoreV1().ConfigMaps(c.Namespace).Get(context.TODO(), EndpointConfigMapName, metav1.GetOptions{})
 	assert.NoError(t, err)
-	assert.Equal(t, "a=1.2.3.1:6789", cm.Data[EndpointDataKey])
+	assert.Equal(t, "a=1.2.3.1:3300", cm.Data[EndpointDataKey])
 	assert.Equal(t, map[string]string{"key": "value"}, cm.Annotations)
 
 	// Persist mon b, and remove mon a for simply testing the configmap is updated
@@ -298,7 +298,7 @@ func TestSaveMonEndpoints(t *testing.T) {
 	clientset := test.New(t, 1)
 	configDir := t.TempDir()
 	ownerInfo := cephclient.NewMinimumOwnerInfoWithOwnerRef()
-	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: configDir}, "ns", cephv1.ClusterSpec{}, ownerInfo)
+	c := New(ctx, &clusterd.Context{Clientset: clientset, ConfigDir: configDir}, "ns", cephv1.ClusterSpec{}, ownerInfo)
 	setCommonMonProperties(c, 1, cephv1.MonSpec{Count: 3, AllowMultiplePerNode: true}, "myversion")
 
 	// create the initial config map
@@ -307,7 +307,7 @@ func TestSaveMonEndpoints(t *testing.T) {
 
 	cm, err := c.context.Clientset.CoreV1().ConfigMaps(c.Namespace).Get(ctx, EndpointConfigMapName, metav1.GetOptions{})
 	assert.NoError(t, err)
-	assert.Equal(t, "a=1.2.3.1:6789", cm.Data[EndpointDataKey])
+	assert.Equal(t, "a=1.2.3.1:3300", cm.Data[EndpointDataKey])
 	assert.Equal(t, `{"node":{}}`, cm.Data[MappingKey])
 	assert.Equal(t, "-1", cm.Data[MaxMonIDKey])
 
@@ -345,7 +345,7 @@ func TestMaxMonID(t *testing.T) {
 	clientset := test.New(t, 1)
 	configDir := t.TempDir()
 	ownerInfo := cephclient.NewMinimumOwnerInfoWithOwnerRef()
-	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: configDir}, "ns", cephv1.ClusterSpec{}, ownerInfo)
+	c := New(context.TODO(), &clusterd.Context{Clientset: clientset, ConfigDir: configDir}, "ns", cephv1.ClusterSpec{}, ownerInfo)
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(1)
 
 	// when the configmap is not found, the maxMonID is -1

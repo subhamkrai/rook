@@ -177,7 +177,7 @@ func add(opManagerContext context.Context, mgr manager.Manager, r reconcile.Reco
 			},
 		},
 		handler.EnqueueRequestsFromMapFunc(handlerFunc),
-		predicateForNodeWatcher(mgr.GetClient(), context))
+		predicateForNodeWatcher(opManagerContext, mgr.GetClient(), context))
 	if err != nil {
 		return err
 	}
@@ -216,11 +216,11 @@ func (r *ReconcileCephCluster) Reconcile(context context.Context, request reconc
 	// workaround because the rook logging mechanism is not compatible with the controller-runtime logging interface
 	reconcileResponse, cephCluster, err := r.reconcile(request)
 
-	return reporting.ReportReconcileResult(logger, r.clusterController.recorder,
-		cephCluster, reconcileResponse, err)
+	return reporting.ReportReconcileResult(logger, r.clusterController.recorder, request,
+		&cephCluster, reconcileResponse, err)
 }
 
-func (r *ReconcileCephCluster) reconcile(request reconcile.Request) (reconcile.Result, *cephv1.CephCluster, error) {
+func (r *ReconcileCephCluster) reconcile(request reconcile.Request) (reconcile.Result, cephv1.CephCluster, error) {
 	// Pass the client context to the ClusterController
 	r.clusterController.client = r.client
 
@@ -236,16 +236,16 @@ func (r *ReconcileCephCluster) reconcile(request reconcile.Request) (reconcile.R
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			logger.Debug("cephCluster resource not found. Ignoring since object must be deleted.")
-			return reconcile.Result{}, cephCluster, nil
+			return reconcile.Result{}, *cephCluster, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, cephCluster, errors.Wrap(err, "failed to get cephCluster")
+		return reconcile.Result{}, *cephCluster, errors.Wrap(err, "failed to get cephCluster")
 	}
 
 	// Set a finalizer so we can do cleanup before the object goes away
 	err = opcontroller.AddFinalizerIfNotPresent(r.opManagerContext, r.client, cephCluster)
 	if err != nil {
-		return reconcile.Result{}, cephCluster, errors.Wrap(err, "failed to add finalizer")
+		return reconcile.Result{}, *cephCluster, errors.Wrap(err, "failed to add finalizer")
 	}
 
 	// DELETE: the CR was deleted
@@ -256,31 +256,31 @@ func (r *ReconcileCephCluster) reconcile(request reconcile.Request) (reconcile.R
 	// Do reconcile here!
 	ownerInfo := k8sutil.NewOwnerInfo(cephCluster, r.scheme)
 	if err := r.clusterController.reconcileCephCluster(cephCluster, ownerInfo); err != nil {
-		return reconcile.Result{}, cephCluster, errors.Wrapf(err, "failed to reconcile cluster %q", cephCluster.Name)
+		return reconcile.Result{}, *cephCluster, errors.Wrapf(err, "failed to reconcile cluster %q", cephCluster.Name)
 	}
 
 	// Return and do not requeue
-	return reconcile.Result{}, cephCluster, nil
+	return reconcile.Result{}, *cephCluster, nil
 }
 
-func (r *ReconcileCephCluster) reconcileDelete(cephCluster *cephv1.CephCluster) (reconcile.Result, *cephv1.CephCluster, error) {
+func (r *ReconcileCephCluster) reconcileDelete(cephCluster *cephv1.CephCluster) (reconcile.Result, cephv1.CephCluster, error) {
 	nsName := r.clusterController.namespacedName
 	var err error
 
 	// Set the deleting status
 	opcontroller.UpdateClusterCondition(r.context, cephCluster, nsName,
-		cephv1.ConditionDeleting, corev1.ConditionTrue, cephv1.ClusterDeletingReason, "Deleting the CephCluster",
+		k8sutil.ObservedGenerationNotAvailable, cephv1.ConditionDeleting, corev1.ConditionTrue, cephv1.ClusterDeletingReason, "Deleting the CephCluster",
 		true /* keep all other conditions to be safe */)
 
 	deps, err := CephClusterDependents(r.context, cephCluster.Namespace)
 	if err != nil {
-		return reconcile.Result{}, cephCluster, err
+		return reconcile.Result{}, *cephCluster, err
 	}
 	if !deps.Empty() {
-		err := reporting.ReportDeletionBlockedDueToDependents(logger, r.client, cephCluster, deps)
-		return opcontroller.WaitForRequeueIfFinalizerBlocked, cephCluster, err
+		err := reporting.ReportDeletionBlockedDueToDependents(r.opManagerContext, logger, r.client, cephCluster, deps)
+		return opcontroller.WaitForRequeueIfFinalizerBlocked, *cephCluster, err
 	}
-	reporting.ReportDeletionNotBlockedDueToDependents(logger, r.client, r.clusterController.recorder, cephCluster)
+	reporting.ReportDeletionNotBlockedDueToDependents(r.opManagerContext, logger, r.client, r.clusterController.recorder, cephCluster)
 
 	doCleanup := true
 
@@ -296,7 +296,7 @@ func (r *ReconcileCephCluster) reconcileDelete(cephCluster *cephv1.CephCluster) 
 		if doCleanup {
 			cephHosts, err := r.clusterController.getCephHosts(cephCluster.Namespace)
 			if err != nil {
-				return reconcile.Result{}, cephCluster, errors.Wrapf(err, "failed to find valid ceph hosts in the cluster %q", cephCluster.Namespace)
+				return reconcile.Result{}, *cephCluster, errors.Wrapf(err, "failed to find valid ceph hosts in the cluster %q", cephCluster.Namespace)
 			}
 			go r.clusterController.startClusterCleanUp(internalCtx, cephCluster, cephHosts, monSecret, clusterFSID)
 		}
@@ -308,18 +308,18 @@ func (r *ReconcileCephCluster) reconcileDelete(cephCluster *cephv1.CephCluster) 
 		if err != nil {
 			// If the cluster cannot be deleted, requeue the request for deletion to see if the conditions
 			// will eventually be satisfied such as the volumes being removed
-			return response, cephCluster, errors.Wrapf(err, "failed to clean up CephCluster %q", nsName.String())
+			return response, *cephCluster, errors.Wrapf(err, "failed to clean up CephCluster %q", nsName.String())
 		}
 	}
 
 	// Remove finalizers
 	err = r.removeFinalizers(r.client, nsName)
 	if err != nil {
-		return reconcile.Result{}, cephCluster, errors.Wrap(err, "failed to remove finalizers")
+		return reconcile.Result{}, *cephCluster, errors.Wrap(err, "failed to remove finalizers")
 	}
 
 	// Return and do not requeue. Successful deletion.
-	return reconcile.Result{}, cephCluster, nil
+	return reconcile.Result{}, *cephCluster, nil
 }
 
 // NewClusterController create controller for watching cluster custom resources created
@@ -340,9 +340,11 @@ func (c *ClusterController) reconcileCephCluster(clusterObj *cephv1.CephCluster,
 	cluster, ok := c.clusterMap[clusterObj.Namespace]
 	if !ok {
 		// It's a new cluster so let's populate the struct
-		cluster = newCluster(clusterObj, c.context, ownerInfo)
+		cluster = newCluster(c.OpManagerCtx, clusterObj, c.context, ownerInfo)
 	}
 	cluster.namespacedName = c.namespacedName
+	// updating observedGeneration in cluster if it's not the first reconcile
+	cluster.observedGeneration = clusterObj.ObjectMeta.Generation
 
 	// Pass down the client to interact with Kubernetes objects
 	// This will be used later down by spec code to create objects like deployment, services etc
@@ -375,8 +377,12 @@ func (c *ClusterController) requestClusterDelete(cluster *cephv1.CephCluster) (r
 		// since the op manager context is cancelled.
 		// close the goroutines watching the health of the cluster (mons, osds, ceph status)
 		for _, daemon := range monitorDaemonList {
-			if monitoring, ok := cluster.monitoringRoutines[daemon]; ok && monitoring.internalCtx.Err() == nil { // if the context hasn't been cancelled
-				cluster.monitoringRoutines[daemon].internalCancel()
+			if monitoring, ok := cluster.monitoringRoutines[daemon]; ok && monitoring.InternalCtx.Err() == nil { // if the context hasn't been cancelled
+				// Stop the monitoring routine
+				cluster.monitoringRoutines[daemon].InternalCancel()
+
+				// Remove the monitoring routine from the map
+				delete(cluster.monitoringRoutines, daemon)
 			}
 		}
 	}
@@ -518,7 +524,7 @@ func (c *ClusterController) deleteOSDEncryptionKeyFromKMS(currentCluster *cephv1
 	}
 
 	// Fetch PVCs
-	osdPVCs, _, err := osd.GetExistingPVCs(c.context, currentCluster.Namespace)
+	osdPVCs, _, err := osd.GetExistingPVCs(c.OpManagerCtx, c.context, currentCluster.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "failed to list osd pvc")
 	}

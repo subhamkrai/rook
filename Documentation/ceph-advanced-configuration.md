@@ -3,6 +3,7 @@ title: Advanced Configuration
 weight: 11300
 indent: true
 ---
+{% include_relative branch.liquid %}
 
 # Advanced Configuration
 
@@ -241,6 +242,11 @@ between each restart to ensure the cluster goes back to "active/clean" state.
 After the pod restart, the new settings should be in effect. Note that if the ConfigMap in the Ceph
 cluster's namespace is created before the cluster is created, the daemons will pick up the settings
 at first launch.
+
+To automate the restart of the Ceph daemon pods, you will need to trigger an update to the pod specs.
+The simplest way to trigger the update is to add [annotations or labels](ceph-cluster-crd.md#annotations-and-labels)
+to the CephCluster CR for the daemons you want to restart. The operator will then proceed with a rolling
+update, similar to any other update to the cluster.
 
 ### Example
 

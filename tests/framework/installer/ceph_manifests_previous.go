@@ -24,7 +24,7 @@ import (
 
 const (
 	// The version from which the upgrade test will start
-	Version1_7 = "v1.7.10"
+	Version1_8 = "v1.8.6"
 )
 
 // CephManifestsPreviousVersion wraps rook yaml definitions
@@ -128,8 +128,8 @@ func (m *CephManifestsPreviousVersion) GetObjectStoreUser(name, displayName, sto
 }
 
 //GetBucketStorageClass returns the manifest to create object bucket
-func (m *CephManifestsPreviousVersion) GetBucketStorageClass(storeName, storageClassName, reclaimPolicy, region string) string {
-	return m.latest.GetBucketStorageClass(storeName, storageClassName, reclaimPolicy, region)
+func (m *CephManifestsPreviousVersion) GetBucketStorageClass(storeName, storageClassName, reclaimPolicy string) string {
+	return m.latest.GetBucketStorageClass(storeName, storageClassName, reclaimPolicy)
 }
 
 //GetOBC returns the manifest to create object bucket claim

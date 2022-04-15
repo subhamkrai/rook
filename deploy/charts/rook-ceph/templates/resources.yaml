@@ -6,6 +6,73 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.5.1-0.20210420220833-f284e2e8098c
     helm.sh/resource-policy: keep
   creationTimestamp: null
+  name: cephblockpoolradosnamespaces.ceph.rook.io
+spec:
+  group: ceph.rook.io
+  names:
+    kind: CephBlockPoolRadosNamespace
+    listKind: CephBlockPoolRadosNamespaceList
+    plural: cephblockpoolradosnamespaces
+    singular: cephblockpoolradosnamespace
+  scope: Namespaced
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: CephBlockPoolRadosNamespace represents a Ceph BlockPool Rados Namespace
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: Spec represents the specification of a Ceph BlockPool Rados Namespace
+              properties:
+                blockPoolName:
+                  description: BlockPoolName is the name of Ceph BlockPool. Typically it's the name of the CephBlockPool CR.
+                  type: string
+              required:
+                - blockPoolName
+              type: object
+            status:
+              description: Status represents the status of a CephBlockPool Rados Namespace
+              properties:
+                info:
+                  additionalProperties:
+                    type: string
+                  nullable: true
+                  type: object
+                phase:
+                  description: ConditionType represent a resource's status
+                  type: string
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+          required:
+            - metadata
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.5.1-0.20210420220833-f284e2e8098c
+    helm.sh/resource-policy: keep
+  creationTimestamp: null
   name: cephblockpools.ceph.rook.io
 spec:
   group: ceph.rook.io
@@ -16,7 +83,11 @@ spec:
     singular: cephblockpool
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephBlockPool represents a Ceph Storage Pool
@@ -115,6 +186,7 @@ spec:
                   enum:
                     - device_health_metrics
                     - .nfs
+                    - .mgr
                   type: string
                 parameters:
                   additionalProperties:
@@ -200,6 +272,28 @@ spec:
             status:
               description: CephBlockPoolStatus represents the mirroring status of Ceph Storage Pool
               properties:
+                conditions:
+                  items:
+                    description: Condition represents a status condition on any Rook-Ceph Custom Resource.
+                    properties:
+                      lastHeartbeatTime:
+                        format: date-time
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        description: ConditionReason is a reason for a condition
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        description: ConditionType represent a resource's status
+                        type: string
+                    type: object
+                  type: array
                 info:
                   additionalProperties:
                     type: string
@@ -295,6 +389,10 @@ spec:
                           type: object
                       type: object
                   type: object
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -474,6 +572,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -510,7 +612,11 @@ spec:
     singular: cephbuckettopic
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephBucketTopic represents a Ceph Object Topic for Bucket Notifications
@@ -621,6 +727,10 @@ spec:
                   description: The ARN of the topic generated by the RGW
                   nullable: true
                   type: string
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -657,7 +767,11 @@ spec:
     singular: cephclient
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephClient represents a Ceph Client
@@ -691,6 +805,10 @@ spec:
                     type: string
                   nullable: true
                   type: object
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -740,8 +858,7 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-        - description: Phase
-          jsonPath: .status.phase
+        - jsonPath: .status.phase
           name: Phase
           type: string
         - description: Message
@@ -1645,14 +1762,32 @@ spec:
                       maximum: 65535
                       minimum: 0
                       type: integer
-                    rulesNamespace:
-                      description: RulesNamespace is the namespace where the prometheus rules and alerts should be created. If empty, the same namespace as the cluster will be used.
-                      type: string
                   type: object
                 network:
                   description: Network related configuration
                   nullable: true
                   properties:
+                    connections:
+                      description: Settings for network connections such as compression and encryption across the wire.
+                      nullable: true
+                      properties:
+                        compression:
+                          description: Compression settings for the network connections.
+                          nullable: true
+                          properties:
+                            enabled:
+                              description: Whether to compress the data in transit across the wire. The default is not set. Requires Ceph Quincy (v17) or newer.
+                              type: boolean
+                          type: object
+                        encryption:
+                          description: Encryption settings for the network connections.
+                          nullable: true
+                          properties:
+                            enabled:
+                              description: Whether to encrypt the data in transit across the wire to prevent eavesdropping the data on the network. The default is not set. Even if encryption is not enabled, clients still establish a strong initial authentication for the connection and data integrity is still validated with a crc check. When encryption is enabled, all communication between clients and Ceph daemons, or between Ceph daemons will be encrypted.
+                              type: boolean
+                          type: object
+                      type: object
                     dualStack:
                       description: DualStack determines whether Ceph daemons should listen on both IPv4 and IPv6
                       type: boolean
@@ -4201,6 +4336,10 @@ spec:
                   type: array
                 message:
                   type: string
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -4261,7 +4400,11 @@ spec:
     singular: cephfilesystemmirror
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephFilesystemMirror is the Ceph Filesystem Mirror object definition
@@ -4855,6 +4998,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -6213,6 +6360,10 @@ spec:
                       description: LastChecked is the last time time the status was checked
                       type: string
                   type: object
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -6312,7 +6463,11 @@ spec:
     singular: cephfilesystemsubvolumegroup
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephFilesystemSubVolumeGroup represents a Ceph Filesystem SubVolumeGroup
@@ -6342,6 +6497,10 @@ spec:
                     type: string
                   nullable: true
                   type: object
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -7004,6 +7163,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -7072,6 +7235,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -7107,7 +7274,11 @@ spec:
     singular: cephobjectstore
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephObjectStore represents a Ceph Object Store Gateway
@@ -8493,6 +8664,10 @@ spec:
                   type: object
                 message:
                   type: string
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
@@ -8533,7 +8708,11 @@ spec:
     singular: cephobjectstoreuser
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephObjectStoreUser represents a Ceph Object Store Gateway User
@@ -8631,6 +8810,10 @@ spec:
                     type: string
                   nullable: true
                   type: object
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -8667,7 +8850,11 @@ spec:
     singular: cephobjectzonegroup
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephObjectZoneGroup represents a Ceph Object Store Gateway Zone Group
@@ -8692,6 +8879,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -8728,7 +8919,11 @@ spec:
     singular: cephobjectzone
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephObjectZone represents a Ceph Object Store Gateway Zone
@@ -9081,6 +9276,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object
@@ -9117,7 +9316,11 @@ spec:
     singular: cephrbdmirror
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: CephRBDMirror represents a Ceph RBD Mirror
@@ -9731,6 +9934,10 @@ spec:
             status:
               description: Status represents the status of an object
               properties:
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 phase:
                   type: string
               type: object

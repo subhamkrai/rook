@@ -24,20 +24,25 @@ toolbox:
   image: rook/ceph:VERSION
   tolerations: []
   affinity: {}
-  resources: {}
-  # limits:
-  #   cpu: "500m"
-  #   memory: "1024Mi"
-  # requests:
-  #   cpu: "100m"
-  #   memory: "128Mi"
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
   # Set the priority class for the toolbox if desired
   # priorityClassName: class
 
+# monitoring requires Prometheus to be pre-installed
 monitoring:
-  # requires Prometheus to be pre-installed
   # enabling will also create RBAC rules to allow Operator to create ServiceMonitors
   enabled: false
+  # whether to create the prometheus rules
+  createPrometheusRules: false
+  # the namespace in which to create the prometheus rules, if different from the rook cluster namespace
+  # If you have multiple rook-ceph clusters in the same k8s cluster, choose the same namespace (ideally, namespace with prometheus
+  # deployed) to set rulesNamespace for all the clusters. Otherwise, you will get duplicate alerts with multiple alert definitions.
   rulesNamespaceOverride:
 
 # If true, create & use PSP resources. Set this to the same value as the rook-ceph chart.
@@ -183,8 +188,8 @@ cephClusterSpec:
   #           - matchExpressions:
   #             - key: role
   #               operator: In
-  #             values:
-  #             - storage-node
+  #               values:
+  #               - storage-node
   #     podAffinity:
   #     podAntiAffinity:
   #     topologySpreadConstraints:
@@ -221,23 +226,63 @@ cephClusterSpec:
   #   # These labels can be passed as LabelSelector to Prometheus
   #   monitoring:
 
-  # resources:
-  #   # The requests and limits set here, allow the mgr pod to use half of one CPU core and 1 gigabyte of memory
-  #   mgr:
-  #     limits:
-  #       cpu: "500m"
-  #       memory: "1024Mi"
-  #     requests:
-  #       cpu: "500m"
-  #       memory: "1024Mi"
-  #   # The above example requests/limits can also be added to the other components
-  #   mon:
-  #   osd:
-  #   prepareosd:
-  #   mgr-sidecar:
-  #   crashcollector:
-  #   logcollector:
-  #   cleanup:
+  resources:
+    mgr:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    mon:
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+      requests:
+        cpu: "1000m"
+        memory: "1Gi"
+    osd:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "4Gi"
+    prepareosd:
+      limits:
+        cpu: "500m"
+        memory: "200Mi"
+      requests:
+        cpu: "500m"
+        memory: "50Mi"
+    mgr-sidecar:
+      limits:
+        cpu: "500m"
+        memory: "100Mi"
+      requests:
+        cpu: "100m"
+        memory: "40Mi"
+    crashcollector:
+      limits:
+        cpu: "500m"
+        memory: "60Mi"
+      requests:
+        cpu: "100m"
+        memory: "60Mi"
+    logcollector:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "100m"
+        memory: "100Mi"
+    cleanup:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "100Mi"
 
   # The option to automatically remove OSDs that are out and are safe to destroy.
   removeOSDsIfOutAndSafeToRemove: false
@@ -389,6 +434,13 @@ cephFileSystems:
       metadataServer:
         activeCount: 1
         activeStandby: true
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+          requests:
+            cpu: "1000m"
+            memory: "4Gi"
     storageClass:
       enabled: true
       isDefault: false
@@ -448,6 +500,13 @@ cephObjectStores:
       preservePoolsOnDelete: true
       gateway:
         port: 80
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+          requests:
+            cpu: "1000m"
+            memory: "1Gi"
         # securePort: 443
         # sslCertificateRef:
         instances: 1

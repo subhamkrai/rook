@@ -155,8 +155,7 @@ func updateCsiClusterConfig(curr, clusterKey string, newCsiClusterConfigEntry *C
 // CreateCsiConfigMap creates an empty config map that will be later used
 // to provide cluster configuration to ceph-csi. If a config map already
 // exists, it will return it.
-func CreateCsiConfigMap(namespace string, clientset kubernetes.Interface, ownerInfo *k8sutil.OwnerInfo) error {
-	ctx := context.TODO()
+func CreateCsiConfigMap(ctx context.Context, namespace string, clientset kubernetes.Interface, ownerInfo *k8sutil.OwnerInfo) error {
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ConfigName,
@@ -190,20 +189,16 @@ func CreateCsiConfigMap(namespace string, clientset kubernetes.Interface, ownerI
 // The locker l is typically a mutex and is used to prevent the config
 // map from being updated for multiple clusters simultaneously.
 func SaveClusterConfig(clientset kubernetes.Interface, clusterNamespace string, clusterInfo *cephclient.ClusterInfo, newCsiClusterConfigEntry *CsiClusterConfigEntry) error {
-	if !CSIEnabled() {
-		logger.Debug("skipping csi config update because csi is not enabled")
-		return nil
-	}
-
-	configMutex.Lock()
-	defer configMutex.Unlock()
-
 	// csi is deployed into the same namespace as the operator
 	csiNamespace := os.Getenv(k8sutil.PodNamespaceEnvVar)
 	if csiNamespace == "" {
-		return errors.Errorf("namespace value missing for %q", k8sutil.PodNamespaceEnvVar)
+		logger.Warningf("cannot save csi config due to missing env var %q", k8sutil.PodNamespaceEnvVar)
+		return nil
 	}
 	logger.Debugf("using %q for csi configmap namespace", csiNamespace)
+
+	configMutex.Lock()
+	defer configMutex.Unlock()
 
 	// fetch current ConfigMap contents
 	configMap, err := clientset.CoreV1().ConfigMaps(csiNamespace).Get(clusterInfo.Context, ConfigName, metav1.GetOptions{})

@@ -46,9 +46,12 @@ const (
 	octopusTestImage = "quay.io/ceph/ceph:v15"
 	// test with the latest pacific build
 	pacificTestImage = "quay.io/ceph/ceph:v16"
+	// test with the latest pacific build
+	quincyTestImage = "quay.io/ceph/ceph:v17"
 	// test with the current development version of Pacific
-	pacificDevelTestImage = "quay.io/ceph/daemon-base:latest-pacific-devel"
 	octopusDevelTestImage = "quay.io/ceph/daemon-base:latest-octopus-devel"
+	pacificDevelTestImage = "quay.io/ceph/daemon-base:latest-pacific-devel"
+	quincyDevelTestImage  = "quay.io/ceph/daemon-base:latest-quincy-devel"
 	// test with the latest master image
 	masterTestImage    = "quay.io/ceph/daemon-base:latest-master-devel"
 	cephOperatorLabel  = "app=rook-ceph-operator"
@@ -59,7 +62,7 @@ const (
 osd_pool_default_size = 1
 bdev_flock_retry = 20
 `
-	volumeReplicationVersion = "v0.1.0"
+	volumeReplicationVersion = "v0.3.0"
 )
 
 var (
@@ -67,6 +70,8 @@ var (
 	OctopusDevelVersion          = cephv1.CephVersionSpec{Image: octopusDevelTestImage}
 	PacificVersion               = cephv1.CephVersionSpec{Image: pacificTestImage}
 	PacificDevelVersion          = cephv1.CephVersionSpec{Image: pacificDevelTestImage}
+	QuincyVersion                = cephv1.CephVersionSpec{Image: quincyTestImage}
+	QuincyDevelVersion           = cephv1.CephVersionSpec{Image: quincyDevelTestImage}
 	MasterVersion                = cephv1.CephVersionSpec{Image: masterTestImage, AllowUnsupported: true}
 	volumeReplicationBaseURL     = fmt.Sprintf("https://raw.githubusercontent.com/csi-addons/volume-replication-operator/%s/config/crd/bases/", volumeReplicationVersion)
 	volumeReplicationCRDURL      = volumeReplicationBaseURL + "replication.storage.openshift.io_volumereplications.yaml"
@@ -91,8 +96,10 @@ func ReturnCephVersion() cephv1.CephVersionSpec {
 		return MasterVersion
 	case "pacific-devel":
 		return PacificDevelVersion
+	case "quincy-devel":
+		return QuincyDevelVersion
 	default:
-		return PacificVersion
+		return QuincyVersion
 	}
 }
 
@@ -183,7 +190,7 @@ func (h *CephInstaller) startAdmissionController() error {
 	if err != nil {
 		return errors.Errorf("failed to find user home directory. %v", err)
 	}
-	scriptPath := path.Join(rootPath, "tests/scripts/deploy_admission_controller_test.sh")
+	scriptPath := path.Join(rootPath, "tests/scripts/deploy_cert_manager.sh")
 	err = h.k8shelper.MakeContext().Executor.ExecuteCommandWithEnv([]string{fmt.Sprintf("NAMESPACE=%s", h.settings.OperatorNamespace), fmt.Sprintf("HOME=%s", userHome)}, "bash", scriptPath)
 	if err != nil {
 		return err
@@ -487,7 +494,6 @@ func (h *CephInstaller) GetNodeHostnames() ([]string, error) {
 }
 
 func (h *CephInstaller) installRookOperator() (bool, error) {
-	ctx := context.TODO()
 	var err error
 
 	h.k8shelper.CreateAnonSystemClusterBinding()
@@ -513,13 +519,13 @@ func (h *CephInstaller) installRookOperator() (bool, error) {
 		return false, err
 	}
 
-	discovery, err := h.k8shelper.Clientset.AppsV1().DaemonSets(h.settings.OperatorNamespace).Get(ctx, "rook-discover", metav1.GetOptions{})
 	if h.settings.EnableDiscovery {
-		assert.NoError(h.T(), err)
-		assert.NotNil(h.T(), discovery)
-	} else {
-		assert.Error(h.T(), err)
-		assert.True(h.T(), kerrors.IsNotFound(err))
+		if h.k8shelper.IsPodInExpectedState("rook-discover", h.settings.OperatorNamespace, "Running") {
+			assert.NoError(h.T(), err)
+		} else {
+			assert.Error(h.T(), err)
+			assert.True(h.T(), kerrors.IsNotFound(err))
+		}
 	}
 
 	return true, nil
@@ -545,6 +551,13 @@ func (h *CephInstaller) InstallRook() (bool, error) {
 	}
 
 	if h.settings.UseHelm {
+		// Install Prometheus so we can create the prometheus rules
+		args := []string{"apply", "-f", "https://raw.githubusercontent.com/coreos/prometheus-operator/v0.40.0/bundle.yaml"}
+		_, err = h.k8shelper.MakeContext().Executor.ExecuteCommandWithOutput("kubectl", args...)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to install prometheus")
+		}
+		// Create the cluster
 		err = h.CreateRookCephClusterViaHelm()
 		if err != nil {
 			return false, errors.Wrap(err, "failed to install ceph cluster using Helm")

@@ -50,7 +50,7 @@ function use_local_disk() {
   else
     # it's the hosted runner!
     sudo sgdisk --zap-all --clear --mbrtogpt -g -- "${BLOCK}"
-    sudo dd if=/dev/zero of="${BLOCK}" bs=1M count=10 oflag=direct
+    sudo dd if=/dev/zero of="${BLOCK}" bs=1M count=10 oflag=direct,dsync
     sudo parted -s "${BLOCK}" mklabel gpt
   fi
   sudo lsblk
@@ -166,7 +166,7 @@ function validate_yaml() {
   kubectl create -f crds.yaml -f common.yaml
 
   # create the volume replication CRDs
-  replication_version=v0.1.0
+  replication_version=v0.3.0
   replication_url="https://raw.githubusercontent.com/csi-addons/volume-replication-operator/${replication_version}/config/crd/bases"
   kubectl create -f "${replication_url}/replication.storage.openshift.io_volumereplications.yaml"
   kubectl create -f "${replication_url}/replication.storage.openshift.io_volumereplicationclasses.yaml"
@@ -213,7 +213,9 @@ function deploy_cluster() {
   kubectl create -f object-test.yaml
   kubectl create -f pool-test.yaml
   kubectl create -f filesystem-test.yaml
+  sed -i "/resources:/,/ # priorityClassName:/d" rbdmirror.yaml
   kubectl create -f rbdmirror.yaml
+  sed -i "/resources:/,/ # priorityClassName:/d" filesystem-mirror.yaml
   kubectl create -f filesystem-mirror.yaml
   kubectl create -f nfs-test.yaml
   kubectl create -f subvolumegroup.yaml
@@ -375,6 +377,56 @@ function create_helm_tag() {
   helm_tag="$(cat _output/version)"
   build_image="$(docker images | awk '/build-/ {print $1}')"
   docker tag "${build_image}" "rook/ceph:${helm_tag}"
+}
+
+function deploy_multus() {
+  # download the multus daemonset, and remove mem and cpu limits that cause it to crash on minikube
+  curl https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick-plugin.yml \
+    | sed -e 's/cpu: /# cpu: /g' -e 's/memory: /# memory: /g' \
+    | kubectl apply -f -
+
+  # install whereabouts
+  kubectl apply \
+    -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/daemonset-install.yaml \
+    -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/ip-reconciler-job.yaml \
+    -f https://github.com/k8snetworkplumbingwg/whereabouts/raw/master/doc/crds/whereabouts.cni.cncf.io_ippools.yaml \
+    -f https://github.com/k8snetworkplumbingwg/whereabouts/raw/master/doc/crds/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml
+
+  # create the rook-ceph namespace if it doesn't exist, the NAD will go in this namespace
+  kubectl create namespace rook-ceph || true
+
+  # install network attachment definitions
+  IFACE="eth0" # the runner has eth0 so we don't need any heureustics to find the interface
+  kubectl apply -f - <<EOF
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: public-net
+  namespace: rook-ceph
+  labels:
+  annotations:
+spec:
+  config: '{ "cniVersion": "0.3.0", "type": "macvlan", "master": "$IFACE", "mode": "bridge", "ipam": { "type": "whereabouts", "range": "192.168.20.0/24" } }'
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: cluster-net
+  namespace: rook-ceph
+  labels:
+  annotations:
+spec:
+  config: '{ "cniVersion": "0.3.0", "type": "macvlan", "master": "$IFACE", "mode": "bridge", "ipam": { "type": "whereabouts", "range": "192.168.21.0/24" } }'
+EOF
+}
+
+function deploy_multus_cluster() {
+  cd deploy/examples
+  deploy_manifest_with_local_build operator.yaml
+  deploy_manifest_with_local_build toolbox.yaml
+  sed -i "s|#deviceFilter:|deviceFilter: ${BLOCK/\/dev\/}|g" cluster-multus-test.yaml
+  kubectl create -f cluster-multus-test.yaml
 }
 
 FUNCTION="$1"
