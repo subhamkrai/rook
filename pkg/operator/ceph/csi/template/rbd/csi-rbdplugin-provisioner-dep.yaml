@@ -27,7 +27,7 @@ spec:
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v={{ .LogLevel }}"
-            - "--timeout=150s"
+            - "--timeout={{ .GRPCTimeout }}"
             - "--retry-interval-start=500ms"
             - "--leader-election=true"
             - "--leader-election-namespace={{ .Namespace }}"
@@ -45,7 +45,7 @@ spec:
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v={{ .LogLevel }}"
-            - "--timeout=150s"
+            - "--timeout={{ .GRPCTimeout }}"
             - "--leader-election"
             - "--leader-election-namespace={{ .Namespace }}"
             - "--handle-volume-inuse-error=false"
@@ -60,7 +60,7 @@ spec:
           image: {{ .AttacherImage }}
           args:
             - "--v={{ .LogLevel }}"
-            - "--timeout=150s"
+            - "--timeout={{ .GRPCTimeout }}"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election=true"
             - "--leader-election-namespace={{ .Namespace }}"
@@ -77,7 +77,7 @@ spec:
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v={{ .LogLevel }}"
-            - "--timeout=150s"
+            - "--timeout={{ .GRPCTimeout }}"
             - "--leader-election=true"
             - "--leader-election-namespace={{ .Namespace }}"
           env:
@@ -116,7 +116,7 @@ spec:
             - "--leader-election-namespace={{ .Namespace }}"
             - "--driver-name={{ .DriverNamePrefix }}rbd.csi.ceph.com"
             - "--csi-address=$(ADDRESS)"
-            - "--rpc-timeout=150s"
+            - "--rpc-timeout={{ .GRPCTimeout }}"
             - "--health-probe-bind-address=:9998"
             - "--leader-elect=true"
           env:
@@ -230,6 +230,10 @@ spec:
               mountPath: /run/secrets/tokens
               readOnly: true
             {{ end }}
+            {{ if .EnableCSIEncryption }}
+            - name: rook-ceph-csi-kms-config
+              mountPath: /etc/ceph-csi-encryption-kms-config/
+            {{ end }}
         - name: liveness-prometheus
           image: {{ .CSIPluginImage }}
           args:
@@ -299,4 +303,12 @@ spec:
                 path: oidc-token
                 expirationSeconds: 3600
                 audience: ceph-csi-kms
+        {{ end }}
+        {{ if .EnableCSIEncryption }}
+        - name: rook-ceph-csi-kms-config
+          configMap:
+            name: rook-ceph-csi-kms-config
+            items:
+            - key: config.json
+              path: config.json
         {{ end }}
