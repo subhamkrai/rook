@@ -23,7 +23,6 @@ import (
 	"reflect"
 
 	"github.com/ceph/go-ceph/rgw/admin"
-	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
 	"github.com/rook/rook/pkg/operator/ceph/reporting"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -188,7 +187,7 @@ func (r *ReconcileObjectStoreUser) reconcile(request reconcile.Request) (reconci
 	r.cephClusterSpec = &cephCluster.Spec
 
 	// Populate clusterInfo during each reconcile
-	r.clusterInfo, _, _, err = mon.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace)
+	r.clusterInfo, _, _, err = opcontroller.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace)
 	if err != nil {
 		return reconcile.Result{}, *cephObjectStoreUser, errors.Wrap(err, "failed to populate cluster info")
 	}
@@ -346,6 +345,9 @@ func (r *ReconcileObjectStoreUser) createorUpdateCephUser(u *cephv1.CephObjectSt
 	}
 
 	// Set access and secret key
+	if r.userConfig.Keys == nil {
+		r.userConfig.Keys = make([]admin.UserKeySpec, 1)
+	}
 	r.userConfig.Keys[0].AccessKey = user.Keys[0].AccessKey
 	r.userConfig.Keys[0].SecretKey = user.Keys[0].SecretKey
 	logger.Info(logCreateOrUpdate)
@@ -393,7 +395,6 @@ func generateUserConfig(user *cephv1.CephObjectStoreUser) admin.User {
 	userConfig := admin.User{
 		ID:          user.Name,
 		DisplayName: displayName,
-		Keys:        make([]admin.UserKeySpec, 1),
 	}
 
 	defaultMaxBuckets := 1000

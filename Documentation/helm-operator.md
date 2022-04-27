@@ -16,7 +16,7 @@ This chart bootstraps a [rook-ceph-operator](https://github.com/rook/rook) deplo
 
 ## Prerequisites
 
-* Kubernetes 1.13+
+* Kubernetes 1.17+
 * Helm 3.x
 
 See the [Helm support matrix](https://helm.sh/docs/topics/version_skew/) for more details.
@@ -114,7 +114,7 @@ The following tables lists the configurable parameters of the rook-operator char
 | `csi.rbdLivenessMetricsPort`        | Ceph CSI RBD driver metrics port.                                                                                           | `8080`                                                    |
 | `csi.forceCephFSKernelClient`       | Enable Ceph Kernel clients on kernel < 4.17 which support quotas for Cephfs.                                                | `true`                                                    |
 | `csi.kubeletDirPath`                | Kubelet root directory path (if the Kubelet uses a different path for the `--root-dir` flag)                                | `/var/lib/kubelet`                                        |
-| `csi.cephcsi.image`                 | Ceph CSI image.                                                                                                             | `quay.io/cephcsi/cephcsi:v3.6.0`                          |
+| `csi.cephcsi.image`                 | Ceph CSI image.                                                                                                             | `quay.io/cephcsi/cephcsi:v3.6.1`                          |
 | `csi.rbdPluginUpdateStrategy`       | CSI Rbd plugin daemonset update strategy, supported values are OnDelete and RollingUpdate.                                  | `RollingUpdate`                                           |
 | `csi.cephFSPluginUpdateStrategy`    | CSI CephFS plugin daemonset update strategy, supported values are OnDelete and RollingUpdate.                               | `RollingUpdate`                                           |
 | `csi.nfsPluginUpdateStrategy`       | CSI NFS plugin daemonset update strategy, supported values are OnDelete and RollingUpdate.                                  | `RollingUpdate`                                           |
