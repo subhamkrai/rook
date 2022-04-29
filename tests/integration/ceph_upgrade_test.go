@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -135,7 +136,26 @@ func (s *UpgradeSuite) testUpgrade(useHelm bool, initialCephVersion v1.CephVersi
 
 	s.verifyOperatorImage(installer.LocalBuildTag)
 	s.verifyRookUpgrade(numOSDs)
-	err := s.installer.WaitForToolbox(s.namespace)
+
+	// From L140 to L156 we are just restarting the rook-ceph-toolbox pod so that it has the latest ceph username form secret
+	// rook-ceph-mon. Above mentioned line should be removed later once we aremove the support of rook 1.9
+	toolboxLabel := "app=rook-ceph-tools"
+	ctx := context.TODO()
+	logger.Infof("Deleting toolbox pod(s)")
+	pods, err := s.k8sh.Clientset.CoreV1().Pods(s.namespace).List(ctx, metav1.ListOptions{LabelSelector: toolboxLabel})
+	assert.NoError(s.T(), err)
+
+	for _, pod := range pods.Items {
+		options := metav1.DeleteOptions{}
+		err := s.k8sh.Clientset.CoreV1().Pods(s.namespace).Delete(ctx, pod.Name, options)
+		assert.NoError(s.T(), err)
+	}
+	for _, pod := range pods.Items {
+		logger.Infof("Waiting for osd pod %s to be deleted", pod.Name)
+		deleted := s.k8sh.WaitUntilPodIsDeleted(pod.Name, s.namespace)
+		assert.True(s.T(), deleted)
+	}
+	err = s.installer.WaitForToolbox(s.namespace)
 	assert.NoError(s.T(), err)
 
 	logger.Infof("Done with automatic upgrade from %s to master", installer.Version1_8)

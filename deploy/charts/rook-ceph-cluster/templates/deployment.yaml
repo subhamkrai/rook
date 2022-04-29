@@ -32,6 +32,8 @@ spec:
           imagePullPolicy: IfNotPresent
           tty: true
           env:
+            - name: CEPH_ARGS
+              value: --name client.rookoperator
             - name: ROOK_CEPH_USERNAME
               valueFrom:
                 secretKeyRef:

@@ -33,8 +33,8 @@ import (
 var RunAllCephCommandsInToolboxPod string
 
 const (
-	// AdminUsername is the name of the admin user
-	AdminUsername = "client.admin"
+	// AdminUsername is the name of the operator admin user
+	AdminUsername = "client.rookoperator"
 	// CephTool is the name of the CLI tool for 'ceph'
 	CephTool = "ceph"
 	// RBDTool is the name of the CLI tool for 'rbd'
@@ -75,7 +75,8 @@ func FinalizeCephCommandArgs(command string, clusterInfo *ClusterInfo, args []st
 	if RunAllCephCommandsInToolboxPod != "" {
 		toolArgs := []string{"exec", "-i", RunAllCephCommandsInToolboxPod, "-n", clusterInfo.Namespace,
 			"--", "timeout", timeout, command}
-		return Kubectl, append(toolArgs, args...)
+		toolArgs = append(toolArgs, args...)
+		return Kubectl, toolArgs
 	}
 
 	// Append the args to find the config and keyring
@@ -141,8 +142,8 @@ func (c *CephToolCommand) run() ([]byte, error) {
 	// these args are not needed since those paths don't exist inside the cmd-proxy container:
 	//      --cluster=openshift-storage
 	//		--conf=/var/lib/rook/openshift-storage/openshift-storage.config
-	//		--name=client.admin
-	//		--keyring=/var/lib/rook/openshift-storage/client.admin.keyring
+	//		--name=client.rookoperator
+	//		--keyring=/var/lib/rook/openshift-storage/client.rookoperator.keyring
 	//
 	// The cmd-proxy container will take care of the rest with the help of the env CEPH_ARGS
 	if !c.RemoteExecution {

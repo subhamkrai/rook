@@ -54,9 +54,10 @@ func TestAdminKeyringStore(t *testing.T) {
 
 	// create key
 	clusterInfo.CephCred.Secret = "adminsecretkey"
+
 	err := k.Admin().CreateOrUpdate(clusterInfo, ctx, v1.AnnotationsSpec{v1.KeyClusterMetadata: v1.Annotations{"key": "value"}})
 	assert.NoError(t, err)
-	assertKeyringData(fmt.Sprintf(adminKeyringTemplate, "adminsecretkey"))
+	assertKeyringData(fmt.Sprintf(operatorAdminKeyringTemplate, "adminsecretkey"))
 
 	// test annotation
 	secret, err := ctx.Clientset.CoreV1().Secrets(clusterInfo.Namespace).Get(clusterInfo.Context, keyringSecretName(adminKeyringResourceName), metav1.GetOptions{})
@@ -67,7 +68,7 @@ func TestAdminKeyringStore(t *testing.T) {
 	clusterInfo.CephCred.Secret = "differentsecretkey"
 	err = k.Admin().CreateOrUpdate(clusterInfo, ctx, v1.AnnotationsSpec{})
 	assert.NoError(t, err)
-	assertKeyringData(fmt.Sprintf(adminKeyringTemplate, "differentsecretkey"))
+	assertKeyringData(fmt.Sprintf(operatorAdminKeyringTemplate, "differentsecretkey"))
 }
 
 func TestAdminVolumeAndMount(t *testing.T) {

@@ -32,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/daemon/ceph/client"
 	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"github.com/rook/rook/pkg/util/exec"
@@ -68,6 +69,11 @@ const (
 var (
 	ClusterInfoNoClusterNoSecret = errors.New("not expected to create new cluster info and did not find existing secret")
 	externalConnectionRetry      = 60 * time.Second
+	adminCapArgs                 = []string{
+		"--cap", "mon", "'allow *'",
+		"--cap", "osd", "'allow *'",
+		"--cap", "mgr", "'allow *'",
+		"--cap", "mds", "'allow'"}
 )
 
 // Mapping is mon node and port mapping
@@ -166,7 +172,29 @@ func CreateOrLoadClusterInfo(clusterdContext *clusterd.Context, context context.
 		clusterInfo.CephCred.Username = string(secret.Data["userID"])
 		clusterInfo.CephCred.Secret = string(secret.Data["userKey"])
 	}
+	if cephUsername, ok := secrets.Data[CephUsernameKey]; ok && string(cephUsername) == "client.admin" {
 
+		if _, err := cephclient.GenerateConnectionConfig(clusterdContext, clusterInfo); err != nil {
+			return nil, maxMonID, monMapping, errors.Wrap(err, "failed to write connection config for existing admin keyring")
+		}
+
+		// generate the new admin keyring
+		access := []string{"mon", "allow *", "mds", "allow *", "mgr", "allow *", "osd", "allow *"}
+		userKey, err := client.AuthGetOrCreateKey(clusterdContext, clusterInfo, cephclient.AdminUsername, access)
+		if err != nil {
+			return nil, maxMonID, monMapping, errors.Wrap(err, "failed to create/update rookoperator keyring")
+		}
+
+		clusterInfo.CephCred.Secret = userKey
+		clusterInfo.CephCred.Username = cephclient.AdminUsername
+
+		secrets.Data[CephUsernameKey] = []byte(cephclient.AdminUsername)
+		secrets.Data[CephUserSecretKey] = []byte(userKey)
+
+		if _, err = clusterdContext.Clientset.CoreV1().Secrets(namespace).Update(context, secrets, metav1.UpdateOptions{}); err != nil {
+			return nil, maxMonID, monMapping, errors.Wrap(err, "failed to update mon secrets")
+		}
+	}
 	return clusterInfo, maxMonID, monMapping, nil
 }
 
@@ -189,12 +217,7 @@ func createNamedClusterInfo(context *clusterd.Context, namespace string) (*cephc
 	}
 
 	// generate the admin secret if one was not provided at the command line
-	args := []string{
-		"--cap", "mon", "'allow *'",
-		"--cap", "osd", "'allow *'",
-		"--cap", "mgr", "'allow *'",
-		"--cap", "mds", "'allow'"}
-	adminSecret, err := genSecret(context.Executor, dir, cephclient.AdminUsername, args)
+	adminSecret, err := genSecret(context.Executor, dir, cephclient.AdminUsername, adminCapArgs)
 	if err != nil {
 		return nil, err
 	}

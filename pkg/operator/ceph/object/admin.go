@@ -242,8 +242,8 @@ func runAdminCommand(c *Context, expectJSON bool, args ...string) (string, error
 	// simply because the external cluster mode does not support that yet
 	//
 	// The following conditions tries to determine if the cluster is external
-	// When connecting to an external cluster, the Ceph user is different than client.admin
-	// This is not perfect though since "client.admin" is somehow supported...
+	// When connecting to an external cluster, the Ceph user is different than client.rookoperator
+	// This is not perfect though since "client.rookoperator" is somehow supported...
 	if c.Name != "" && c.clusterInfo.CephCred.Username == cephclient.AdminUsername {
 		options := []string{
 			fmt.Sprintf("--rgw-realm=%s", c.Realm),

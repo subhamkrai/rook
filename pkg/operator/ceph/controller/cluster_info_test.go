@@ -46,6 +46,9 @@ func TestCreateClusterSecrets(t *testing.T) {
 			if command == "ceph-authtool" && args[0] == "--create-keyring" {
 				filename := args[1]
 				assert.NoError(t, ioutil.WriteFile(filename, []byte(fmt.Sprintf("key = %s", adminSecret)), 0600))
+			} else if command == "ceph" && args[0] == "auth" && args[1] == "get-or-create-key" {
+				return `{"key":"AQDkLIBd9vLGJxAAnXsIKPrwvUXAmY+D1g0X1Q=="}`, nil
+
 			}
 			return "", nil
 		},
@@ -60,7 +63,7 @@ func TestCreateClusterSecrets(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, -1, maxID)
 	require.NotNil(t, info)
-	assert.Equal(t, "client.admin", info.CephCred.Username)
+	assert.Equal(t, "client.rookoperator", info.CephCred.Username)
 	assert.Equal(t, adminSecret, info.CephCred.Secret)
 	assert.NotEqual(t, "", info.FSID)
 	assert.NotNil(t, mapping)
@@ -81,7 +84,7 @@ func TestCreateClusterSecrets(t *testing.T) {
 	// Check that the cluster info can now be loaded
 	info, _, _, err = CreateOrLoadClusterInfo(context, ctx, namespace, ownerInfo)
 	assert.NoError(t, err)
-	assert.Equal(t, "client.admin", info.CephCred.Username)
+	assert.Equal(t, "client.rookoperator", info.CephCred.Username)
 	assert.Equal(t, adminSecret, info.CephCred.Secret)
 
 	// Fail to load the external cluster if the admin placeholder is specified
@@ -91,7 +94,7 @@ func TestCreateClusterSecrets(t *testing.T) {
 	_, _, _, err = CreateOrLoadClusterInfo(context, ctx, namespace, ownerInfo)
 	assert.Error(t, err)
 
-	// Load the external cluster with the legacy external creds
+	// Load the external cluster with the new creds
 	secret.Name = OperatorCreds
 	secret.Data = map[string][]byte{
 		"userID":  []byte("testid"),
@@ -103,4 +106,18 @@ func TestCreateClusterSecrets(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "testid", info.CephCred.Username)
 	assert.Equal(t, "testkey", info.CephCred.Secret)
+
+	// err = clientset.CoreV1().Secrets(namespace).Delete(ctx, AppName, metav1.DeleteOptions{})
+	// assert.NoError(t, err)
+	secret.Name = AppName
+	secret.Data = map[string][]byte{
+		string(CephUsernameKey):   []byte("client.admin"),
+		string(CephUserSecretKey): []byte("key"),
+	}
+	_, err = clientset.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	assert.NoError(t, err)
+	info, _, _, err = CreateOrLoadClusterInfo(context, ctx, namespace, ownerInfo)
+	assert.NoError(t, err)
+	assert.Equal(t, "client.rookoperator", info.CephCred.Username)
+	assert.Equal(t, adminSecret, info.CephCred.Secret)
 }

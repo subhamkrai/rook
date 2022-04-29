@@ -30,8 +30,8 @@ const (
 	adminKeyringResourceName          = "rook-ceph-admin"
 	crashCollectorKeyringResourceName = "rook-ceph-crash-collector"
 
-	adminKeyringTemplate = `
-[client.admin]
+	operatorAdminKeyringTemplate = `
+[client.rookoperator]
 	key = %s
 	caps mds = "allow *"
 	caps mon = "allow *"
@@ -53,8 +53,8 @@ func (s *SecretStore) Admin() *AdminStore {
 
 // CreateOrUpdate creates or updates the admin keyring secret with cluster information.
 func (a *AdminStore) CreateOrUpdate(c *cephclient.ClusterInfo, context *clusterd.Context, annotation v1.AnnotationsSpec) error {
-	keyring := fmt.Sprintf(adminKeyringTemplate, c.CephCred.Secret)
-	err := a.secretStore.CreateOrUpdate(adminKeyringResourceName, keyring)
+	operatorKeyring := fmt.Sprintf(operatorAdminKeyringTemplate, c.CephCred.Secret)
+	err := a.secretStore.CreateOrUpdate(adminKeyringResourceName, operatorKeyring)
 	if err != nil {
 		return err
 	}
