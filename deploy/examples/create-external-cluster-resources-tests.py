@@ -34,8 +34,7 @@ ext = importlib.import_module("create-external-cluster-resources")
 class TestRadosJSON(unittest.TestCase):
     def setUp(self):
         print("\nI am in setup")
-        self.rjObj = ext.RadosJSON(['--rbd-data-pool-name=abc',
-                                    '--rgw-endpoint=10.10.212.122:9000', '--format=json'])
+        self.rjObj = ext.RadosJSON(['--rbd-data-pool-name=abc', '--rgw-endpoint=10.10.212.122:9000', '--format=json'])
         # for testing, we are using 'DummyRados' object
         self.rjObj.cluster = ext.DummyRados.Rados()
 
@@ -163,7 +162,7 @@ class TestRadosJSON(unittest.TestCase):
             self.fail("An Exception was expected to be thrown")
         except ext.ExecutionFailureException as err:
             print("Successfully thrown error: {}".format(err))
-        # mal formatted IP
+        # malformatted IP
         try:
             self.rjObj._invalid_endpoint("10.103..212.133:8000")
             self.fail("An Exception was expected to be thrown")
@@ -179,7 +178,14 @@ class TestRadosJSON(unittest.TestCase):
             self.fail("An Exception was expected to be thrown")
         except ext.ExecutionFailureException as err:
             print("Successfully thrown error: {}".format(err))
-
+            
+    def test_convert_fqdn_rgw_endpoint_to_ip(self):
+        try:
+            rgw_endpoint_ip = self.rjObj.convert_fqdn_rgw_endpoint_to_ip("www.redhat.com:80")
+            print("Successfully Converted www.redhat.com to it's IP {}".format(rgw_endpoint_ip))
+        except  ext.ExecutionFailureException as err:
+            print("Successfully thrown error: {}".format(err))   
+        
     def test_upgrade_user_permissions(self):
         self.rjObj = ext.RadosJSON(
             ['--upgrade', '--run-as-user=client.csi-cephfs-provisioner', '--format=json'])

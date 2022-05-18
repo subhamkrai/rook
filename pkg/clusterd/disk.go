@@ -128,10 +128,12 @@ func PopulateDeviceInfo(d string, executor exec.Executor) (*sys.LocalDisk, error
 
 	// get the UUID for disks
 	var diskUUID string
-	if diskType != sys.PartType {
-		diskUUID, err = sys.GetDiskUUID(d, executor)
+	if diskType == sys.DiskType {
+		uuid, err := sys.GetDiskUUID(d, executor)
 		if err != nil {
-			return nil, err
+			logger.Warning(err)
+		} else {
+			diskUUID = uuid
 		}
 	}
 
@@ -165,6 +167,12 @@ func PopulateDeviceInfo(d string, executor exec.Executor) (*sys.LocalDisk, error
 	}
 	if val, ok := diskProps["KNAME"]; ok {
 		disk.KernelName = path.Base(val)
+	}
+	if val, ok := diskProps["FSTYPE"]; ok && val != "" {
+		disk.Filesystem = path.Base(val)
+	}
+	if val, ok := diskProps["MOUNTPOINT"]; ok && val != "" {
+		disk.Mountpoint = path.Base(val)
 	}
 
 	return disk, nil

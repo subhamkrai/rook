@@ -30,8 +30,9 @@
         "rgw",
         "security",
         "subvolumegroup",
-	"namespace",
-        "test"
+        "namespace",
+        "test",
+        "webhook"
       ]
     ],
     "body-leading-blank": [
