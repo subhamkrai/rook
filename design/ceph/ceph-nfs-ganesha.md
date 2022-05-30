@@ -167,15 +167,15 @@ pods based on OpenStack users' requests. The OpenStack user VMs will have
 network connectivity to the ganesha server pods, and manually mount the shares
 using NFS clients.
 
-[NFS-Ganesha]: https://github.com/nfs-ganesha/nfs-ganesha/wiki
-[CephFS]: http://docs.ceph.com/docs/master/cephfs/nfs/
-[RGW]: http://docs.ceph.com/docs/master/radosgw/nfs/
-[Rook toolbox]: (/Documentation/ceph-toolbox.md)
-[Ceph manager]: (http://docs.ceph.com/docs/master/mgr/)
-[OpenStack]: (https://www.openstack.org/software/)
-[Manila]: (https://wiki.openstack.org/wiki/Manila)
-[CephFS driver]: (https://github.com/openstack/manila/blob/master/doc/source/admin/cephfs_driver.rst)
-[k8s ConfigMaps]: (https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
-[k8s Service]: (https://kubernetes.io/docs/concepts/services-networking/service)
-[Ceph Pool CRD]: (https://github.com/rook/rook/blob/master/Documentation/ceph-pool-crd.md)
-[k8s Deployments]: (https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+1. [NFS-Ganesha](https://github.com/nfs-ganesha/nfs-ganesha/wiki)
+1. [CephFS](http://docs.ceph.com/docs/master/cephfs/nfs/)
+1. [RGW](http://docs.ceph.com/docs/master/radosgw/nfs/)
+1. [Rook toolbox](/Documentation/Troubleshooting/ceph-toolbox.md)
+1. [Ceph manager](http://docs.ceph.com/docs/master/mgr/)
+1. [OpenStack](https://www.openstack.org/software/)
+1. [Manila](https://wiki.openstack.org/wiki/Manila)
+1. [CephFS driver](https://github.com/openstack/manila/blob/master/doc/source/admin/cephfs_driver.rst)
+1. [k8s ConfigMaps](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
+1. [k8s Service](https://kubernetes.io/docs/concepts/services-networking/service)
+1. [Ceph Pool CRD](https://github.com/rook/rook/blob/master/Documentation/CRDs/Block-Storage/ceph-block-pool-crd.md)
+1. [k8s Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
