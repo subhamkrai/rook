@@ -347,6 +347,7 @@ func (c *Cluster) makeDeployment(osdProps osdProperties, osd OSDInfo, provisionC
 			"--setgroup", "ceph",
 			fmt.Sprintf("--crush-location=%s", osd.Location),
 		}
+		osd.LVBackedPV = true
 	} else if osdProps.onPVC() && osd.CVMode == "raw" {
 		doBinaryCopyInit = false
 		doConfigInit = false
