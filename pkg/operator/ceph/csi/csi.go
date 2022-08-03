@@ -131,6 +131,11 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 		return errors.Wrap(err, "error getting CSI RBD liveness metrics port.")
 	}
 
+	CSIParam.EnableLiveness, err = strconv.ParseBool(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_LIVENESS", "false"))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse value for 'CSI_ENABLE_LIVENESS'")
+	}
+
 	// default value `system-node-critical` is the highest available priority
 	CSIParam.PluginPriorityClassName = k8sutil.GetValue(r.opConfig.Parameters, "CSI_PLUGIN_PRIORITY_CLASSNAME", "")
 
@@ -209,6 +214,17 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 			logger.Errorf("failed to parse CSI_LOG_LEVEL. Defaulting to %d. %v", defaultLogLevel, err)
 		} else {
 			CSIParam.LogLevel = uint8(l)
+		}
+	}
+
+	sidecarLogLevel := k8sutil.GetValue(r.opConfig.Parameters, "CSI_SIDECAR_LOG_LEVEL", "")
+	CSIParam.SidecarLogLevel = defaultSidecarLogLevel
+	if sidecarLogLevel != "" {
+		l, err := strconv.ParseUint(sidecarLogLevel, 10, 8)
+		if err != nil {
+			logger.Errorf("failed to parse CSI_SIDECAR_LOG_LEVEL. Defaulting to %d. %v", defaultSidecarLogLevel, err)
+		} else {
+			CSIParam.SidecarLogLevel = uint8(l)
 		}
 	}
 

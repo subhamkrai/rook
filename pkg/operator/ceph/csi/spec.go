@@ -68,7 +68,9 @@ type Param struct {
 	MountCustomCephConf            bool
 	EnableOIDCTokenProjection      bool
 	EnableCSIEncryption            bool
+	EnableLiveness                 bool
 	LogLevel                       uint8
+	SidecarLogLevel                uint8
 	CephFSGRPCMetricsPort          uint16
 	CephFSLivenessMetricsPort      uint16
 	RBDGRPCMetricsPort             uint16
@@ -213,7 +215,8 @@ const (
 
 	detectCSIVersionName = "rook-ceph-csi-detect-version"
 	// default log level for csi containers
-	defaultLogLevel uint8 = 0
+	defaultLogLevel        uint8 = 0
+	defaultSidecarLogLevel uint8 = 0
 
 	// GRPC timeout.
 	defaultGRPCTimeout = 150
@@ -320,11 +323,14 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
 		}
 
-		rbdService, err = templateToService("rbd-service", RBDPluginServiceTemplatePath, tp)
-		if err != nil {
-			return errors.Wrap(err, "failed to load rbd plugin service template")
+		// Create service if either liveness or GRPC metrics are enabled.
+		if CSIParam.EnableLiveness || EnableCSIGRPCMetrics {
+			rbdService, err = templateToService("rbd-service", RBDPluginServiceTemplatePath, tp)
+			if err != nil {
+				return errors.Wrap(err, "failed to load rbd plugin service template")
+			}
+			rbdService.Namespace = r.opConfig.OperatorNamespace
 		}
-		rbdService.Namespace = r.opConfig.OperatorNamespace
 		enabledDrivers = append(enabledDrivers, driverDetails{
 			name:           RBDDriverShortName,
 			fullName:       RBDDriverName,
@@ -344,12 +350,14 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		if err != nil {
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
 		}
-
-		cephfsService, err = templateToService("cephfs-service", CephFSPluginServiceTemplatePath, tp)
-		if err != nil {
-			return errors.Wrap(err, "failed to load cephfs plugin service template")
+		// Create service if either liveness or GRPC metrics are enabled.
+		if CSIParam.EnableLiveness || EnableCSIGRPCMetrics {
+			cephfsService, err = templateToService("cephfs-service", CephFSPluginServiceTemplatePath, tp)
+			if err != nil {
+				return errors.Wrap(err, "failed to load cephfs plugin service template")
+			}
+			cephfsService.Namespace = r.opConfig.OperatorNamespace
 		}
-		cephfsService.Namespace = r.opConfig.OperatorNamespace
 		enabledDrivers = append(enabledDrivers, driverDetails{
 			name:           CephFSDriverShortName,
 			fullName:       CephFSDriverName,
@@ -602,7 +610,7 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		}
 	}
 	if EnableCephFS {
-		err = csiDriverobj.createCSIDriverInfo(r.opManagerContext, r.context.Clientset, CephFSDriverName, k8sutil.GetValue(r.opConfig.Parameters, "CSI_CEPHFS_FSGROUPPOLICY", string(k8scsi.ReadWriteOnceWithFSTypeFSGroupPolicy)), true)
+		err = csiDriverobj.createCSIDriverInfo(r.opManagerContext, r.context.Clientset, CephFSDriverName, k8sutil.GetValue(r.opConfig.Parameters, "CSI_CEPHFS_FSGROUPPOLICY", string(k8scsi.ReadWriteOnceWithFSTypeFSGroupPolicy)), false)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create CSI driver object for %q", CephFSDriverName)
 		}

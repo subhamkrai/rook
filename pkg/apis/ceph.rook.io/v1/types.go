@@ -227,9 +227,13 @@ type LogCollectorSpec struct {
 	// Enabled represents whether the log collector is enabled
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
-	// Periodicity is the periodicity of the log rotation
+	// Periodicity is the periodicity of the log rotation.
+	// +kubebuilder:validation:Pattern=`^$|^(hourly|daily|weekly|monthly|1h|24h|1d)$`
 	// +optional
 	Periodicity string `json:"periodicity,omitempty"`
+	// MaxLogSize is the maximum size of the log per ceph daemons. Must be at least 1M.
+	// +optional
+	MaxLogSize *resource.Quantity `json:"maxLogSize,omitempty"`
 }
 
 // SecuritySpec is security spec to include various security items such as kms
@@ -238,6 +242,18 @@ type SecuritySpec struct {
 	// +optional
 	// +nullable
 	KeyManagementService KeyManagementServiceSpec `json:"kms,omitempty"`
+}
+
+// ObjectStoreSecuritySpec is spec to define security features like encryption
+type ObjectStoreSecuritySpec struct {
+	// +optional
+	// +nullable
+	SecuritySpec `json:""`
+
+	// The settings for supporting AWS-SSE:S3 with RGW
+	// +optional
+	// +nullable
+	ServerSideEncryptionS3 KeyManagementServiceSpec `json:"s3,omitempty"`
 }
 
 // KeyManagementServiceSpec represent various details of the KMS server
@@ -1320,7 +1336,7 @@ type ObjectStoreSpec struct {
 	// Security represents security settings
 	// +optional
 	// +nullable
-	Security *SecuritySpec `json:"security,omitempty"`
+	Security *ObjectStoreSecuritySpec `json:"security,omitempty"`
 
 	// Whether host networking is enabled for the rgw daemon. If not set, the network settings from the cluster CR will be applied.
 	// +kubebuilder:pruning:PreserveUnknownFields
