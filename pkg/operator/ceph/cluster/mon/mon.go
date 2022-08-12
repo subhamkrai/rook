@@ -136,6 +136,8 @@ type monConfig struct {
 	Port int32
 	// The zone used for a stretch cluster
 	Zone string
+	// The node where the mon is assigned
+	NodeName string
 	// DataPathMap is the mapping relationship between mon data stored on the host and mon data
 	// stored in containers.
 	DataPathMap *config.DataPathMap
@@ -522,7 +524,7 @@ func (c *Cluster) initClusterInfo(cephVersion cephver.CephVersion, clusterName s
 func (c *Cluster) initMonConfig(size int) (int, []*monConfig, error) {
 
 	// initialize the mon pod info for mons that have been previously created
-	mons := c.clusterInfoToMonConfig("")
+	mons := c.clusterInfoToMonConfig()
 
 	// initialize mon info if we don't have enough mons (at first startup)
 	existingCount := len(c.ClusterInfo.Monitors)
@@ -538,7 +540,11 @@ func (c *Cluster) initMonConfig(size int) (int, []*monConfig, error) {
 	return existingCount, mons, nil
 }
 
-func (c *Cluster) clusterInfoToMonConfig(excludedMon string) []*monConfig {
+func (c *Cluster) clusterInfoToMonConfig() []*monConfig {
+	return c.clusterInfoToMonConfigWithExclude("")
+}
+
+func (c *Cluster) clusterInfoToMonConfigWithExclude(excludedMon string) []*monConfig {
 	mons := []*monConfig{}
 	for _, monitor := range c.ClusterInfo.Monitors {
 		if monitor.Name == excludedMon {
@@ -546,9 +552,11 @@ func (c *Cluster) clusterInfoToMonConfig(excludedMon string) []*monConfig {
 			continue
 		}
 		var zone string
+		var nodeName string
 		schedule := c.mapping.Schedule[monitor.Name]
 		if schedule != nil {
 			zone = schedule.Zone
+			nodeName = schedule.Name
 		}
 		mons = append(mons, &monConfig{
 			ResourceName: resourceName(monitor.Name),
@@ -556,6 +564,7 @@ func (c *Cluster) clusterInfoToMonConfig(excludedMon string) []*monConfig {
 			Port:         cephutil.GetPortFromEndpoint(monitor.Endpoint),
 			PublicIP:     cephutil.GetIPFromEndpoint(monitor.Endpoint),
 			Zone:         zone,
+			NodeName:     nodeName,
 			DataPathMap:  config.NewStatefulDaemonDataPathMap(c.spec.DataDirHostPath, dataDirRelativeHostPath(monitor.Name), config.MonType, monitor.Name, c.Namespace),
 		})
 	}
@@ -1128,6 +1137,10 @@ func (c *Cluster) commitMaxMonID(monName string) error {
 		return errors.Wrapf(err, "invalid mon name %q", monName)
 	}
 
+	return c.commitMaxMonIDRequireIncrementing(committedMonID, true)
+}
+
+func (c *Cluster) commitMaxMonIDRequireIncrementing(desiredMaxMonID int, requireIncrementing bool) error {
 	configmap, err := c.context.Clientset.CoreV1().ConfigMaps(c.Namespace).Get(c.ClusterInfo.Context, EndpointConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to find existing mon endpoint config map")
@@ -1139,13 +1152,13 @@ func (c *Cluster) commitMaxMonID(monName string) error {
 		return errors.Wrap(err, "failed to read existing maxMonId")
 	}
 
-	if existingMax >= committedMonID {
-		logger.Infof("no need to commit maxMonID %d since it is not greater than existing maxMonID %d", committedMonID, existingMax)
+	if requireIncrementing && existingMax >= desiredMaxMonID {
+		logger.Infof("no need to commit maxMonID %d since it is not greater than existing maxMonID %d", desiredMaxMonID, existingMax)
 		return nil
 	}
 
-	logger.Infof("updating maxMonID from %d to %d after committing mon %q", existingMax, committedMonID, monName)
-	configmap.Data[MaxMonIDKey] = strconv.Itoa(committedMonID)
+	logger.Infof("updating maxMonID from %d to %d", existingMax, desiredMaxMonID)
+	configmap.Data[MaxMonIDKey] = strconv.Itoa(desiredMaxMonID)
 
 	if _, err = c.context.Clientset.CoreV1().ConfigMaps(c.Namespace).Update(c.ClusterInfo.Context, configmap, metav1.UpdateOptions{}); err != nil {
 		return errors.Wrap(err, "failed to update mon endpoint config map for the maxMonID")
@@ -1331,7 +1344,7 @@ func waitForQuorumWithMons(context *clusterd.Context, clusterInfo *cephclient.Cl
 
 	// wait for monitors to establish quorum
 	retryCount := 0
-	retryMax := 30
+	retryMax := 60
 	for {
 		retryCount++
 		if retryCount > retryMax {
