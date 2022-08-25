@@ -28,7 +28,7 @@ import (
 
 // Smoke Test for File System Storage for CephNFS - Test check the following operations on Filesystem Storage in order
 // Create,Mount,Write,Read,Unmount and Delete.
-func runNFSFileE2ETest(helper *clients.TestClient, k8sh *utils.K8sHelper, s suite.Suite, settings *installer.TestCephSettings, filesystemName string) {
+func runNFSFileE2ETest(helper *clients.TestClient, k8sh *utils.K8sHelper, s *suite.Suite, settings *installer.TestCephSettings, filesystemName string) {
 	defer fileTestDataCleanUp(helper, k8sh, s, filePodName, settings.Namespace, filesystemName)
 	logger.Infof("Running on Rook Cluster %s", settings.Namespace)
 	logger.Infof("File Storage End To End Integration Test for CephNFS- create, mount, write to, read from, and unmount")
@@ -41,7 +41,7 @@ func runNFSFileE2ETest(helper *clients.TestClient, k8sh *utils.K8sHelper, s suit
 
 	if settings.TestNFSCSI {
 		// Following two commands are needed to be able to create NFS exports in ceph v17.2
-		// refer: https://github.com/rook/rook/blob/master/Documentation/CRDs/ceph-nfs-crd.md#ceph-v1720
+		// refer: https://github.com/rook/rook/blob/master/Documentation/CRDs/ceph-nfs-crd.md#ceph-v1721
 		parameters := []string{"orch", "set", "backend"}
 		clusterInfo := client.AdminTestClusterInfo(settings.Namespace)
 		cmd, args := client.FinalizeCephCommandArgs("ceph", clusterInfo, parameters, k8sh.MakeContext().ConfigDir)

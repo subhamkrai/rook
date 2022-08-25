@@ -7,7 +7,7 @@ don't hesitate to reach out to us on our [Slack](https://Rook-io.slack.com) dev 
 
 ## Prerequisites
 
-1. [GO 1.17](https://golang.org/dl/) or greater installed
+1. [GO 1.18](https://golang.org/dl/) or greater installed
 2. Git client installed
 3. GitHub account
 
@@ -35,7 +35,7 @@ cd rook
 
 ### Build
 
-Building Rook-Ceph is simple.
+Building Rook Ceph is simple.
 
 ```console
 make build
