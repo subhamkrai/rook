@@ -42,6 +42,15 @@ data:
   # there is significant drop in read/write performance.
   # CSI_ENABLE_HOST_NETWORK: "true"
 
+  # Set to true to enable adding volume metadata on the CephFS subvolume and RBD images.
+  # Not all users might be interested in getting volume/snapshot details as metadata on CephFS subvolume and RBD images.
+  # Hence enable metadata is false by default.
+  # CSI_ENABLE_METADATA: "true"
+
+  # cluster name identifier to set as metadata on the CephFS subvolume and RBD images. This will be useful in cases
+  # like for example, when two container orchestrator clusters (Kubernetes/OCP) are using a single ceph cluster.
+  # CSI_CLUSTER_NAME: "my-prod-cluster"
+
   # Set logging level for cephCSI containers maintained by the cephCSI.
   # Supported values from 0 to 5. 0 for general useful logs, 5 for trace level verbosity.
   # CSI_LOG_LEVEL: "0"
@@ -77,7 +86,7 @@ data:
 
   # (Optional) policy for modifying a volume's ownership or permissions when the CephFS PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
-  CSI_CEPHFS_FSGROUPPOLICY: "ReadWriteOnceWithFSType"
+  CSI_CEPHFS_FSGROUPPOLICY: "File"
 
   # (Optional) policy for modifying a volume's ownership or permissions when the NFS PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
@@ -472,7 +481,7 @@ spec:
       serviceAccountName: rook-ceph-system
       containers:
         - name: rook-ceph-operator
-          image: rook/ceph:v1.10.0-beta.0
+          image: rook/ceph:v1.10.0
           args: ["ceph", "operator"]
           securityContext:
             runAsNonRoot: true

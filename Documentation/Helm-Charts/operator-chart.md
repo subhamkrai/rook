@@ -10,7 +10,7 @@ This chart bootstraps a [rook-ceph-operator](https://github.com/rook/rook) deplo
 
 ## Prerequisites
 
-* Kubernetes 1.17+
+* Kubernetes 1.19+
 * Helm 3.x
 
 See the [Helm support matrix](https://helm.sh/docs/topics/version_skew/) for more details.
@@ -73,6 +73,8 @@ The following tables lists the configurable parameters of the rook-operator char
 | `csi.rbdFSGroupPolicy`              | Policy for modifying a volume's ownership or permissions when the RBD PVC is being mounted                                                       | `ReadWriteOnceWithFSType`                                 |
 | `csi.cephFSFSGroupPolicy`           | Policy for modifying a volume's ownership or permissions when the CephFS PVC is being mounted                                                    | `ReadWriteOnceWithFSType`                                 |
 | `csi.nfsFSGroupPolicy`              | Policy for modifying a volume's ownership or permissions when the NFS PVC is being mounted                                                       | `ReadWriteOnceWithFSType`                                 |
+| `csi.enableMetadata`                | Set volume metadata on the CephFS subvolumes and RBD images.                                                                                     | `false`                                                   |
+| `csi.clusterName`                   | Cluster name identifier to set as metadata on the CephFS subvolumes and RBD images.                                                              | `<none>`                                                  |
 | `csi.logLevel`                      | Set logging level for cephCSI containers maintained by the cephCSI. Supported values from 0 to 5. 0 for general useful logs, 5 for trace level verbosity.                      | `0`                                                       |
 | `csi.sidecarLogLevel`                      | Set logging level for cephCSI sidecar containers. Supported values from 0 to 5. 0 for general useful logs (the default), 5 for trace level verbosity.                      | `0`                                                       |
 | `csi.grpcTimeoutInSeconds`          | Set GRPC timeout for csi containers.                                                                                                             | `150`                                                     |

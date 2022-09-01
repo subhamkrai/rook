@@ -13,7 +13,7 @@ from other pods running in your cluster.
 
 ## Minimum Version
 
-Kubernetes **v1.17** or higher is supported by Rook.
+Kubernetes **v1.19** or higher is supported by Rook.
 
 ## CPU Architecture
 
@@ -36,7 +36,7 @@ In order to configure the Ceph storage cluster, at least one of these local stor
 A simple Rook cluster can be created with the following kubectl commands and [example manifests](https://github.com/rook/rook/blob/master/deploy/examples).
 
 ```console
-$ git clone --single-branch --branch v1.10.0-beta.0 https://github.com/rook/rook.git
+$ git clone --single-branch --branch v1.10.0 https://github.com/rook/rook.git
 cd rook/deploy/examples
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml
 kubectl create -f cluster.yaml
@@ -50,6 +50,7 @@ The first step is to deploy the Rook operator. Check that you are using the [exa
 
 ```console
 cd deploy/examples
+# kubectl create -f psp.yaml # if your cluster is protected by pod security policies
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml
 
 # verify the rook-ceph-operator is in the `Running` state before proceeding

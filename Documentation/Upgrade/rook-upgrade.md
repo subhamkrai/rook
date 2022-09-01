@@ -52,7 +52,6 @@ those releases.
 * The minimum supported version of Ceph-CSI is v3.6.0. You must update to at least this version of
   Ceph-CSI before or at the same time you update the Rook operator image to v1.10
 
-
 ## Considerations
 
 With this upgrade guide, there are a few notes to consider:
@@ -144,7 +143,7 @@ by the Operator. Also update the Custom Resource Definitions (CRDs).
 Get the latest common resources manifests that contain the latest changes.
 
 ```console
-git clone --single-branch --depth=1 --branch v1.10.0-beta.0 https://github.com/rook/rook.git
+git clone --single-branch --depth=1 --branch v1.10.0 https://github.com/rook/rook.git
 cd rook/deploy/examples
 ```
 
@@ -183,7 +182,7 @@ The largest portion of the upgrade is triggered when the operator's image is upd
 When the operator is updated, it will proceed to update all of the Ceph daemons.
 
 ```console
-kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:v1.10.0-beta.0
+kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:v1.10.0
 ```
 
 ### **3. Update Ceph CSI**

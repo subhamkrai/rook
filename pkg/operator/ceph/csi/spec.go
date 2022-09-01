@@ -57,7 +57,9 @@ type Param struct {
 	ProvisionerPriorityClassName   string
 	VolumeReplicationImage         string
 	CSIAddonsImage                 string
+	CSIClusterName                 string
 	GRPCTimeout                    time.Duration
+	CSIEnableMetadata              bool
 	EnablePluginSelinuxHostMount   bool
 	EnableCSIHostNetwork           bool
 	EnableOMAPGenerator            bool
@@ -128,10 +130,10 @@ var (
 	DefaultCSIPluginImage         = "quay.io/cephcsi/cephcsi:v3.7.0"
 	DefaultNFSPluginImage         = "registry.k8s.io/sig-storage/nfsplugin:v4.0.0"
 	DefaultRegistrarImage         = "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.5.1"
-	DefaultProvisionerImage       = "registry.k8s.io/sig-storage/csi-provisioner:v3.1.0"
-	DefaultAttacherImage          = "registry.k8s.io/sig-storage/csi-attacher:v3.4.0"
+	DefaultProvisionerImage       = "registry.k8s.io/sig-storage/csi-provisioner:v3.2.1"
+	DefaultAttacherImage          = "registry.k8s.io/sig-storage/csi-attacher:v3.5.0"
 	DefaultSnapshotterImage       = "registry.k8s.io/sig-storage/csi-snapshotter:v6.0.1"
-	DefaultResizerImage           = "registry.k8s.io/sig-storage/csi-resizer:v1.4.0"
+	DefaultResizerImage           = "registry.k8s.io/sig-storage/csi-resizer:v1.5.0"
 	DefaultVolumeReplicationImage = "quay.io/csiaddons/volumereplication-operator:v0.3.0"
 	DefaultCSIAddonsImage         = "quay.io/csiaddons/k8s-sidecar:v0.4.0"
 
@@ -164,9 +166,7 @@ var (
 
 const (
 	KubeMinMajor                     = "1"
-	kubeMinVerForSnapshot            = "17"
 	KubeMinVerForOIDCTokenProjection = "20"
-	kubeMinVerForV1csiDriver         = "18"
 	kubeMaxVerForBeta1csiDriver      = "21"
 
 	// common tolerations and node affinity
@@ -290,25 +290,22 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		CSIParam.MountCustomCephConf = v.SupportsCustomCephConf()
 	}
 
-	csiDriverobj = beta1CsiDriver{}
-	if ver.Major > KubeMinMajor || ver.Major == KubeMinMajor && ver.Minor >= kubeMinVerForV1csiDriver {
-		csiDriverobj = v1CsiDriver{}
-		// In case of an k8s version upgrade, delete the beta CSIDriver object;
-		// before the creation of updated v1 object to avoid conflicts.
-		// Also, attempt betav1 driver object deletion only if version is less
-		// than maximum supported version for betav1 object.(unavailable in v1.22+)
-		// Ignore if not found.
-		if EnableRBD && ver.Minor <= kubeMaxVerForBeta1csiDriver {
-			err = beta1CsiDriver{}.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, RBDDriverName)
-			if err != nil {
-				logger.Errorf("failed to delete %q Driver Info. %v", RBDDriverName, err)
-			}
+	csiDriverobj = v1CsiDriver{}
+	// In case of an k8s version upgrade, delete the beta CSIDriver object;
+	// before the creation of updated v1 object to avoid conflicts.
+	// Also, attempt betav1 driver object deletion only if version is less
+	// than maximum supported version for betav1 object.(unavailable in v1.22+)
+	// Ignore if not found.
+	if EnableRBD && ver.Minor <= kubeMaxVerForBeta1csiDriver {
+		err = beta1CsiDriver{}.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, RBDDriverName)
+		if err != nil {
+			logger.Errorf("failed to delete %q Driver Info. %v", RBDDriverName, err)
 		}
-		if EnableCephFS && ver.Minor <= kubeMaxVerForBeta1csiDriver {
-			err = beta1CsiDriver{}.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, CephFSDriverName)
-			if err != nil {
-				logger.Errorf("failed to delete %q Driver Info. %v", CephFSDriverName, err)
-			}
+	}
+	if EnableCephFS && ver.Minor <= kubeMaxVerForBeta1csiDriver {
+		err = beta1CsiDriver{}.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, CephFSDriverName)
+		if err != nil {
+			logger.Errorf("failed to delete %q Driver Info. %v", CephFSDriverName, err)
 		}
 	}
 
@@ -661,10 +658,7 @@ func (r *ReconcileCSI) stopDrivers(ver *version.Info) error {
 }
 
 func (r *ReconcileCSI) deleteCSIDriverResources(ver *version.Info, daemonset, deployment, service, driverName string) error {
-	csiDriverobj = beta1CsiDriver{}
-	if ver.Major > KubeMinMajor || ver.Major == KubeMinMajor && ver.Minor >= kubeMinVerForV1csiDriver {
-		csiDriverobj = v1CsiDriver{}
-	}
+	csiDriverobj = v1CsiDriver{}
 	err := k8sutil.DeleteDaemonset(r.opManagerContext, r.context.Clientset, r.opConfig.OperatorNamespace, daemonset)
 	if err != nil {
 		return errors.Wrapf(err, "failed to delete the %q", daemonset)

@@ -152,11 +152,9 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 		CSIParam.EnableOIDCTokenProjection = true
 	}
 
-	// if k8s >= v1.17 enable RBD and CephFS snapshotter by default
-	if ver.Major == KubeMinMajor && ver.Minor >= kubeMinVerForSnapshot {
-		CSIParam.EnableRBDSnapshotter = true
-		CSIParam.EnableCephFSSnapshotter = true
-	}
+	// enable RBD and CephFS snapshotter by default
+	CSIParam.EnableRBDSnapshotter = true
+	CSIParam.EnableCephFSSnapshotter = true
 
 	if strings.EqualFold(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_RBD_SNAPSHOTTER", "true"), "false") {
 		CSIParam.EnableRBDSnapshotter = false
@@ -178,6 +176,10 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 
 	if strings.EqualFold(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_ENCRYPTION", "false"), "true") {
 		CSIParam.EnableCSIEncryption = true
+	}
+
+	if strings.EqualFold(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_METADATA", "false"), "true") {
+		CSIParam.CSIEnableMetadata = true
 	}
 
 	if strings.EqualFold(k8sutil.GetValue(r.opConfig.Parameters, "CSI_CEPHFS_PLUGIN_UPDATE_STRATEGY", rollingUpdate), onDelete) {
@@ -261,6 +263,7 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 	CSIParam.CSINFSPodLabels = k8sutil.ParseStringToLabels(csiNFSPodLabels)
 	csiRBDPodLabels := k8sutil.GetValue(r.opConfig.Parameters, "ROOK_CSI_RBD_POD_LABELS", "")
 	CSIParam.CSIRBDPodLabels = k8sutil.ParseStringToLabels(csiRBDPodLabels)
+	CSIParam.CSIClusterName = k8sutil.GetValue(r.opConfig.Parameters, "CSI_CLUSTER_NAME", "")
 
 	return nil
 }
