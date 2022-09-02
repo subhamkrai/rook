@@ -791,7 +791,7 @@ func (r *ReconcileCSI) configureHolder(driver driverDetails, multusCluster Clust
 
 	// Make the DS name unique per Ceph cluster
 	cephPluginHolder.Name = fmt.Sprintf("%s-%s", cephPluginHolder.Name, multusCluster.cluster.Name)
-	cephPluginHolder.Spec.Template.Name = fmt.Sprintf("%s-%s", cephPluginHolder.Spec.Template.Name, multusCluster.cluster.Name)
+	cephPluginHolder.Spec.Template.Name = cephPluginHolder.Name
 	cephPluginHolder.Spec.Template.Spec.Containers[0].Name = fmt.Sprintf("%s-%s", cephPluginHolder.Spec.Template.Spec.Containers[0].Name, multusCluster.cluster.Name)
 
 	// Add default labels
