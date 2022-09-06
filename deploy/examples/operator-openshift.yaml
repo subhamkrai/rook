@@ -165,7 +165,7 @@ data:
 
   # (Optional) policy for modifying a volume's ownership or permissions when the RBD PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
-  CSI_RBD_FSGROUPPOLICY: "ReadWriteOnceWithFSType"
+  CSI_RBD_FSGROUPPOLICY: "File"
 
   # (Optional) policy for modifying a volume's ownership or permissions when the CephFS PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
@@ -173,7 +173,7 @@ data:
 
   # (Optional) policy for modifying a volume's ownership or permissions when the NFS PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
-  CSI_NFS_FSGROUPPOLICY: "ReadWriteOnceWithFSType"
+  CSI_NFS_FSGROUPPOLICY: "File"
 
   # (Optional) Allow starting unsupported ceph-csi image
   ROOK_CSI_ALLOW_UNSUPPORTED_VERSION: "false"
@@ -190,7 +190,6 @@ data:
   # ROOK_CSI_PROVISIONER_IMAGE: "registry.k8s.io/sig-storage/csi-provisioner:v3.2.1"
   # ROOK_CSI_SNAPSHOTTER_IMAGE: "registry.k8s.io/sig-storage/csi-snapshotter:v6.0.1"
   # ROOK_CSI_ATTACHER_IMAGE: "registry.k8s.io/sig-storage/csi-attacher:v3.5.0"
-  # ROOK_CSI_NFS_IMAGE: "registry.k8s.io/sig-storage/nfsplugin:v4.0.0"
 
   # (Optional) set user created priorityclassName for csi plugin pods.
   CSI_PLUGIN_PRIORITY_CLASSNAME: "system-node-critical"
