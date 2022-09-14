@@ -435,6 +435,11 @@ func getAvailableDevices(context *clusterd.Context, agent *OsdAgent) (*DeviceOsd
 		}
 		logger.Infof("device %q is available.", device.Name)
 
+		if device.Type == sys.PartType && agent.storeConfig.EncryptedDevice {
+			logger.Infof("partition %q is not picked because encrypted OSD on partition is not allowed", device.Name)
+			continue
+		}
+
 		var deviceInfo *DeviceOsdIDEntry
 		if agent.metadataDevice != "" && agent.metadataDevice == device.Name {
 			// current device is desired as the metadata device
@@ -491,9 +496,17 @@ func getAvailableDevices(context *clusterd.Context, agent *OsdAgent) (*DeviceOsd
 					} else if strings.HasPrefix(desiredDevice.Name, "/dev/") {
 						matched = matchDevLinks(device.DevLinks, desiredDevice.Name)
 					}
-					if matched && device.Type == sys.LVMType && desiredDevice.MetadataDevice != "" {
-						logger.Infof("logical volume %q is not picked because OSD on LV with metadata device is not allowed", device.Name)
-						continue
+					if matched && device.Type == sys.LVMType {
+						if agent.storeConfig.EncryptedDevice {
+							logger.Infof("logical volume %q is not picked because encrypted OSD on LV is not allowed", device.Name)
+							matched = false
+							continue
+						}
+						if desiredDevice.MetadataDevice != "" {
+							logger.Infof("logical volume %q is not picked because OSD on LV with metadata device is not allowed", device.Name)
+							matched = false
+							continue
+						}
 					}
 				}
 
