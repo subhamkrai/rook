@@ -27,6 +27,7 @@ In order to configure the Ceph storage cluster, at least one of these local stor
 
 * Raw devices (no partitions or formatted filesystems)
 * Raw partitions (no formatted filesystem)
+* LVM Logical Volumes (no formatted filesystem)
 * Persistent Volumes available from a storage class in `block` mode
 
 ## TL;DR
@@ -34,7 +35,7 @@ In order to configure the Ceph storage cluster, at least one of these local stor
 A simple Rook cluster can be created with the following kubectl commands and [example manifests](https://github.com/rook/rook/blob/master/deploy/examples).
 
 ```console
-$ git clone --single-branch --branch v1.10.1 https://github.com/rook/rook.git
+$ git clone --single-branch --branch v1.10.2 https://github.com/rook/rook.git
 cd rook/deploy/examples
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml
 kubectl create -f cluster.yaml
