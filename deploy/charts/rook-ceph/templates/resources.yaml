@@ -12728,8 +12728,6 @@ spec:
                 phase:
                   description: ConditionType represent a resource's status
                   type: string
-              required:
-                - endpoints
               type: object
               x-kubernetes-preserve-unknown-fields: true
           required:
