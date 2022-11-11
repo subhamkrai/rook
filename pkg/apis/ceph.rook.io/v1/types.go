@@ -1463,8 +1463,9 @@ type ObjectStoreStatus struct {
 	// +optional
 	Message string `json:"message,omitempty"`
 	// +optional
-	BucketStatus *BucketStatus   `json:"bucketStatus,omitempty"`
-	Endpoints    ObjectEndpoints `json:"endpoints"`
+	BucketStatus *BucketStatus `json:"bucketStatus,omitempty"`
+	// +optional
+	Endpoints ObjectEndpoints `json:"endpoints"`
 	// +optional
 	// +nullable
 	Info       map[string]string `json:"info,omitempty"`
