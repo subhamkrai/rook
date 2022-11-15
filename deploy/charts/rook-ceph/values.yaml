@@ -269,6 +269,8 @@ csi:
   #cephfsLivenessMetricsPort: 9081
   #rbdGrpcMetricsPort: 9090
   #csiAddonsPort: 9070
+  # Set to true to enable Ceph CSI liveness container.
+  enableLiveness: false
   # Enable Ceph Kernel clients on kernel < 4.17. If your kernel does not support quotas for CephFS
   # you may want to disable this setting. However, this will cause an issue during upgrades
   # with the FUSE client. See the upgrade guide: https://rook.io/docs/rook/v1.2/ceph-upgrade.html
