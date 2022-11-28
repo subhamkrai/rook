@@ -59,6 +59,7 @@ type Param struct {
 	EnableCephFSSnapshotter        bool
 	EnableVolumeReplicationSideCar bool
 	EnableCSIAddonsSideCar         bool
+	EnableLiveness                 bool
 	LogLevel                       uint8
 	CephFSGRPCMetricsPort          uint16
 	CephFSLivenessMetricsPort      uint16
@@ -281,6 +282,11 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		return errors.Wrap(err, "error getting CSI RBD liveness metrics port.")
 	}
 
+	tp.EnableLiveness, err = strconv.ParseBool(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_LIVENESS", "false"))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse value for 'CSI_ENABLE_LIVENESS'")
+	}
+
 	// default value `system-node-critical` is the highest available priority
 	tp.PluginPriorityClassName = k8sutil.GetValue(r.opConfig.Parameters, "CSI_PLUGIN_PRIORITY_CLASSNAME", "")
 
@@ -376,11 +382,14 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
 		}
 
-		rbdService, err = templateToService("rbd-service", RBDPluginServiceTemplatePath, tp)
-		if err != nil {
-			return errors.Wrap(err, "failed to load rbd plugin service template")
+		// Create service if either liveness or GRPC metrics are enabled.
+		if tp.EnableLiveness || EnableCSIGRPCMetrics {
+			rbdService, err = templateToService("rbd-service", RBDPluginServiceTemplatePath, tp)
+			if err != nil {
+				return errors.Wrap(err, "failed to load rbd plugin service template")
+			}
+			rbdService.Namespace = r.opConfig.OperatorNamespace
 		}
-		rbdService.Namespace = r.opConfig.OperatorNamespace
 	}
 	if EnableCephFS {
 		cephfsPlugin, err = templateToDaemonSet("cephfsplugin", CephFSPluginTemplatePath, tp)
@@ -393,11 +402,14 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
 		}
 
-		cephfsService, err = templateToService("cephfs-service", CephFSPluginServiceTemplatePath, tp)
-		if err != nil {
-			return errors.Wrap(err, "failed to load cephfs plugin service template")
+		// Create service if either liveness or GRPC metrics are enabled.
+		if tp.EnableLiveness || EnableCSIGRPCMetrics {
+			cephfsService, err = templateToService("cephfs-service", CephFSPluginServiceTemplatePath, tp)
+			if err != nil {
+				return errors.Wrap(err, "failed to load cephfs plugin service template")
+			}
+			cephfsService.Namespace = r.opConfig.OperatorNamespace
 		}
-		cephfsService.Namespace = r.opConfig.OperatorNamespace
 	}
 
 	// get common provisioner tolerations and node affinity

@@ -27,6 +27,9 @@ data:
 {{- if .Values.csi.cephFSPluginUpdateStrategy }}
   CSI_CEPHFS_PLUGIN_UPDATE_STRATEGY: {{ .Values.csi.cephFSPluginUpdateStrategy | quote }}
 {{- end }}
+{{- if .Values.csi.enableLiveness }}
+  CSI_ENABLE_LIVENESS: {{ .Values.csi.enableLiveness | quote }}
+{{- end }}
 {{- if .Values.csi.rbdFSGroupPolicy }}
   CSI_RBD_FSGROUPPOLICY: {{ .Values.csi.rbdFSGroupPolicy | quote }}
 {{- end }}
