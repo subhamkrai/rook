@@ -45,6 +45,7 @@ type Executor interface {
 	ExecuteCommandWithOutput(command string, arg ...string) (string, error)
 	ExecuteCommandWithCombinedOutput(command string, arg ...string) (string, error)
 	ExecuteCommandWithTimeout(timeout time.Duration, command string, arg ...string) (string, error)
+	ExecuteCommandWithStdin(timeout time.Duration, command string, stdin *string, arg ...string) error
 }
 
 // CommandExecutor is the type of the Executor
@@ -53,6 +54,14 @@ type CommandExecutor struct{}
 // ExecuteCommand starts a process and wait for its completion
 func (c *CommandExecutor) ExecuteCommand(command string, arg ...string) error {
 	return c.ExecuteCommandWithEnv([]string{}, command, arg...)
+}
+
+// ExecuteCommandWithStdin starts a process, provides stdin and wait for its completion  with timeout.
+func (c *CommandExecutor) ExecuteCommandWithStdin(timeout time.Duration, command string, stdin *string, arg ...string) error {
+	output, err := executeCommandWithTimeout(timeout, command, stdin, arg...)
+	logger.Infof("Command %q output: %q", command, output)
+
+	return err
 }
 
 // ExecuteCommandWithEnv starts a process with env variables and wait for its completion
@@ -73,6 +82,11 @@ func (*CommandExecutor) ExecuteCommandWithEnv(env []string, command string, arg 
 
 // ExecuteCommandWithTimeout starts a process and wait for its completion with timeout.
 func (*CommandExecutor) ExecuteCommandWithTimeout(timeout time.Duration, command string, arg ...string) (string, error) {
+	return executeCommandWithTimeout(timeout, command, nil, arg...)
+}
+
+// executeCommandWithTimeout starts a process, provides stdin and wait for its completion with timeout.
+func executeCommandWithTimeout(timeout time.Duration, command string, stdin *string, arg ...string) (string, error) {
 	logCommand(command, arg...)
 	//nolint:gosec // Rook controls the input to the exec arguments
 	cmd := exec.Command(command, arg...)
@@ -80,6 +94,10 @@ func (*CommandExecutor) ExecuteCommandWithTimeout(timeout time.Duration, command
 	var b bytes.Buffer
 	cmd.Stdout = &b
 	cmd.Stderr = &b
+
+	if stdin != nil {
+		cmd.Stdin = strings.NewReader(*stdin)
+	}
 
 	if err := cmd.Start(); err != nil {
 		return "", err
