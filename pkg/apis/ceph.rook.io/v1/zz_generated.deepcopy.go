@@ -2817,11 +2817,6 @@ func (in *MonitoringSpec) DeepCopyInto(out *MonitoringSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Interval != nil {
-		in, out := &in.Interval, &out.Interval
-		*out = new(metav1.Duration)
-		**out = **in
-	}
 	return
 }
 
