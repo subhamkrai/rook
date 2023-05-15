@@ -50,13 +50,11 @@ const (
 )
 
 var (
-	MinVersionForCephExporter = cephver.CephVersion{Major: 18, Minor: 0, Extra: 0}
+	MinVersionForCephExporter = cephver.CephVersion{Major: 17, Minor: 2, Extra: 6}
 )
 
 // createOrUpdateCephExporter is a wrapper around controllerutil.CreateOrUpdate
 func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations []corev1.Toleration, cephCluster cephv1.CephCluster, cephVersion *cephver.CephVersion) (controllerutil.OperationResult, error) {
-	// CephVersion change is done temporarily, as some regression was detected in Ceph version 17.2.6 which is summarised here https://github.com/ceph/ceph/pull/50718#issuecomment-1505608312.
-	// Thus, disabling ceph-exporter for now until all the regression are fixed.
 	if !cephVersion.IsAtLeast(MinVersionForCephExporter) {
 		logger.Infof("Skipping exporter reconcile on ceph version %q", cephVersion.String())
 		return controllerutil.OperationResultNone, nil
@@ -114,6 +112,7 @@ func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations
 		if cephVersion != nil {
 			controller.AddCephVersionLabelToDeployment(*cephVersion, deploy)
 		}
+		var terminationGracePeriodSeconds int64 = 2
 		deploy.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: deploymentLabels,
@@ -126,11 +125,12 @@ func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations
 				Containers: []corev1.Container{
 					getCephExporterDaemonContainer(cephCluster, *cephVersion),
 				},
-				Tolerations:       tolerations,
-				RestartPolicy:     corev1.RestartPolicyAlways,
-				HostNetwork:       cephCluster.Spec.Network.IsHost(),
-				Volumes:           volumes,
-				PriorityClassName: cephv1.GetCephExporterPriorityClassName(cephCluster.Spec.PriorityClassNames),
+				Tolerations:                   tolerations,
+				RestartPolicy:                 corev1.RestartPolicyAlways,
+				HostNetwork:                   cephCluster.Spec.Network.IsHost(),
+				Volumes:                       volumes,
+				PriorityClassName:             cephv1.GetCephExporterPriorityClassName(cephCluster.Spec.PriorityClassNames),
+				TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 			},
 		}
 		cephv1.GetCephExporterAnnotations(cephCluster.Spec.Annotations).ApplyToObjectMeta(&deploy.Spec.Template.ObjectMeta)
