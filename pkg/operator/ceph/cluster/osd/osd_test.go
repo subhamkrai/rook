@@ -813,3 +813,14 @@ func TestReplaceOSDForNewStore(t *testing.T) {
 		assert.Nil(t, c.replaceOSD)
 	})
 }
+
+func TestGetLocationWithRegex(t *testing.T) {
+	location := getLocationWithRegex("")
+	assert.Equal(t, "", location)
+
+	location = getLocationWithRegex(`ceph-osd --crush-location="root=default host=node" --default-log-to-stderr=true`)
+	assert.Equal(t, "root=default host=node", location)
+
+	location = getLocationWithRegex(`ceph-osd --crush-location="" --default-log-to-stderr=true`)
+	assert.Equal(t, "", location)
+}
