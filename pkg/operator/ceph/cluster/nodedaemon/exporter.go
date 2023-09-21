@@ -50,7 +50,8 @@ const (
 )
 
 var (
-	MinVersionForCephExporter = cephver.CephVersion{Major: 17, Minor: 2, Extra: 6}
+	// expoter service isn't required in 4.13 which is based on 17.2.x
+	MinVersionForCephExporter = cephver.CephVersion{Major: 18, Minor: 0, Extra: 0}
 )
 
 // createOrUpdateCephExporter is a wrapper around controllerutil.CreateOrUpdate
