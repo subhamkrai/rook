@@ -58,9 +58,11 @@ except ModuleNotFoundError:
 try:
     # for 2.7.x
     from urlparse import urlparse
+    from urllib import urlencode as urlencode
 except ModuleNotFoundError:
     # for 3.x
     from urllib.parse import urlparse
+    from urllib.parse import urlencode as urlencode
 
 try:
     from base64 import encodestring
@@ -555,7 +557,7 @@ class RadosJSON:
             )
 
     def _invalid_endpoint(self, endpoint_str):
-        # seprating port, by getting last split of `:` delimiter
+        # separating port, by getting last split of `:` delimiter
         try:
             endpoint_str_ip, port = endpoint_str.rsplit(":", 1)
         except ValueError:
@@ -1160,7 +1162,7 @@ class RadosJSON:
         # check if user already exist
         user_key = self.check_user_exist(entity)
         if user_key != "":
-            return user_key, f"{entity.split('.', 1)[1]}"
+            return user_key
 
         ret_val, json_out, err_msg = self._common_cmd_json_gen(cmd_json)
         # if there is an unsuccessful attempt,
@@ -1363,7 +1365,7 @@ class RadosJSON:
         rgw_endpoint = self._arg_parser.rgw_endpoint
         base_url = base_url + "://" + rgw_endpoint + "/admin/info?"
         params = {"format": "json"}
-        request_url = base_url + urllib.parse.urlencode(params)
+        request_url = base_url + urlencode(params)
 
         try:
             r = requests.get(
