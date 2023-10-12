@@ -32,9 +32,9 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	"github.com/rook/rook/pkg/daemon/ceph/osd/kms"
-	"github.com/rook/rook/pkg/operator/ceph/cluster/crash"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mgr"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
+	"github.com/rook/rook/pkg/operator/ceph/cluster/nodedaemon"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/telemetry"
 	"github.com/rook/rook/pkg/operator/ceph/config"
@@ -44,7 +44,6 @@ import (
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	rookversion "github.com/rook/rook/pkg/version"
 	v1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -60,6 +59,7 @@ type cluster struct {
 	context            *clusterd.Context
 	Namespace          string
 	Spec               *cephv1.ClusterSpec
+	clusterMetadata    metav1.ObjectMeta
 	namespacedName     types.NamespacedName
 	mons               *mon.Cluster
 	ownerInfo          *k8sutil.OwnerInfo
@@ -76,6 +76,7 @@ func newCluster(ctx context.Context, c *cephv1.CephCluster, context *clusterd.Co
 		ClusterInfo:        client.AdminClusterInfo(ctx, c.Namespace, c.Name),
 		Namespace:          c.Namespace,
 		Spec:               &c.Spec,
+		clusterMetadata:    c.ObjectMeta,
 		context:            context,
 		namespacedName:     types.NamespacedName{Namespace: c.Namespace, Name: c.Name},
 		monitoringRoutines: make(map[string]*controller.ClusterHealth),
@@ -91,7 +92,7 @@ func newCluster(ctx context.Context, c *cephv1.CephCluster, context *clusterd.Co
 func (c *cluster) reconcileCephDaemons(rookImage string, cephVersion cephver.CephVersion) error {
 	// Create a configmap for overriding ceph config settings
 	// These settings should only be modified by a user after they are initialized
-	err := populateConfigOverrideConfigMap(c.context, c.Namespace, c.ownerInfo)
+	err := populateConfigOverrideConfigMap(c.context, c.Namespace, c.ownerInfo, c.clusterMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to populate config override config map")
 	}
@@ -118,8 +119,8 @@ func (c *cluster) reconcileCephDaemons(rookImage string, cephVersion cephver.Cep
 	c.ClusterInfo.NetworkSpec = c.Spec.Network
 
 	// The cluster Identity must be established at this point
-	if !c.ClusterInfo.IsInitialized(true) {
-		return errors.New("the cluster identity was not established")
+	if err := c.ClusterInfo.IsInitialized(); err != nil {
+		return errors.Wrap(err, "the cluster identity was not established")
 	}
 
 	if c.ClusterInfo.Context.Err() != nil {
@@ -179,7 +180,7 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 		}
 	}
 
-	// Depending on the cluster type choose the correct orchestation
+	// Depending on the cluster type choose the correct orchestration
 	if cluster.Spec.External.Enable {
 		err := c.configureExternalCephCluster(cluster)
 		if err != nil {
@@ -187,7 +188,7 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 			return errors.Wrap(err, "failed to configure external ceph cluster")
 		}
 	} else {
-		clusterInfo, _, _, err := controller.LoadClusterInfo(c.context, c.OpManagerCtx, cluster.Namespace)
+		clusterInfo, _, _, err := controller.LoadClusterInfo(c.context, c.OpManagerCtx, cluster.Namespace, cluster.Spec)
 		if err != nil {
 			if errors.Is(err, controller.ClusterInfoNoClusterNoSecret) {
 				logger.Info("clusterInfo not yet found, must be a new cluster.")
@@ -197,7 +198,6 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 		} else {
 			clusterInfo.OwnerInfo = cluster.ownerInfo
 			clusterInfo.SetName(c.namespacedName.Name)
-			clusterInfo.RequireMsgr2 = cluster.Spec.RequireMsgr2()
 			cluster.ClusterInfo = clusterInfo
 		}
 		// If the local cluster has already been configured, immediately start monitoring the cluster.
@@ -214,6 +214,9 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 			controller.UpdateCondition(c.OpManagerCtx, c.context, c.namespacedName, k8sutil.ObservedGenerationNotAvailable, cephv1.ConditionProgressing, v1.ConditionFalse, cephv1.ClusterProgressingReason, err.Error())
 			return errors.Wrap(err, "failed to configure local ceph cluster")
 		}
+
+		// Asynchronously report the telemetry to allow another reconcile to proceed if needed
+		go cluster.reportTelemetry()
 	}
 
 	// Populate ClusterInfo with the last value
@@ -222,9 +225,6 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 
 	// Start the monitoring if not already started
 	c.configureCephMonitoring(cluster, cluster.ClusterInfo)
-
-	// Asynchronously report the telemetry to allow another reconcile to proceed if needed
-	go cluster.reportTelemetry()
 
 	return nil
 }
@@ -249,6 +249,13 @@ func (c *ClusterController) configureLocalCephCluster(cluster *cluster) error {
 		stretchVersion := cephver.CephVersion{Major: 16, Minor: 2, Build: 5}
 		if !cephVersion.IsAtLeast(stretchVersion) {
 			return errors.Errorf("stretch clusters minimum ceph version is %q, but is running %s", stretchVersion.String(), cephVersion.String())
+		}
+	}
+
+	if cluster.Spec.Network.MultiClusterService.Enabled {
+		serviceExportVersion := cephver.CephVersion{Major: 17, Minor: 2, Extra: 6}
+		if !cephVersion.IsAtLeast(serviceExportVersion) {
+			return errors.Errorf("minimum ceph version to support multi cluster service is %q, but is running %s", serviceExportVersion.String(), cephVersion.String())
 		}
 	}
 
@@ -282,40 +289,15 @@ func preClusterStartValidation(cluster *cluster) error {
 	if err := validateStretchCluster(cluster); err != nil {
 		return err
 	}
-	if cluster.Spec.Network.IsMultus() {
-		_, isPublic := cluster.Spec.Network.Selectors[config.PublicNetworkSelectorKeyName]
-		_, isCluster := cluster.Spec.Network.Selectors[config.ClusterNetworkSelectorKeyName]
-		if !isPublic && !isCluster {
-			return errors.New("both network selector values for public and cluster selector cannot be empty for multus provider")
-		}
 
-		for _, selector := range config.NetworkSelectors {
-			// If one selector is empty, we continue
-			// This means a single interface is used both public and cluster network
-			if _, ok := cluster.Spec.Network.Selectors[selector]; !ok {
-				continue
-			}
-
-			multusNamespace, nad := config.GetMultusNamespace(cluster.Spec.Network.Selectors[selector])
-			if multusNamespace == "" {
-				multusNamespace = cluster.Namespace
-			}
-
-			// Get network attachment definition
-			_, err := cluster.context.NetworkClient.NetworkAttachmentDefinitions(multusNamespace).Get(cluster.ClusterInfo.Context, nad, metav1.GetOptions{})
-			if err != nil {
-				if kerrors.IsNotFound(err) {
-					return errors.Wrapf(err, "specified network attachment definition for selector %q does not exist", selector)
-				}
-				return errors.Wrapf(err, "failed to fetch network attachment definition for selector %q", selector)
-			}
-		}
+	if err := cephv1.ValidateNetworkSpec(cluster.Namespace, cluster.Spec.Network); err != nil {
+		return errors.Wrapf(err, "failed to validate network spec for cluster in namespace %q", cluster.Namespace)
 	}
 
 	// Validate on-PVC cluster encryption KMS settings
 	if cluster.Spec.Storage.IsOnPVCEncrypted() && cluster.Spec.Security.KeyManagementService.IsEnabled() {
 		// Validate the KMS details
-		err := kms.ValidateConnectionDetails(cluster.ClusterInfo.Context, cluster.context, &cluster.Spec.Security, cluster.Namespace)
+		err := kms.ValidateConnectionDetails(cluster.ClusterInfo.Context, cluster.context, &cluster.Spec.Security.KeyManagementService, cluster.Namespace)
 		if err != nil {
 			return errors.Wrap(err, "failed to validate kms connection details")
 		}
@@ -502,7 +484,7 @@ func (c *cluster) postMonStartupActions() error {
 	}
 
 	// Create crash collector Kubernetes Secret
-	err = crash.CreateCrashCollectorSecret(c.context, c.ClusterInfo)
+	err = nodedaemon.CreateCrashCollectorSecret(c.context, c.ClusterInfo)
 	if err != nil {
 		return errors.Wrap(err, "failed to create crash collector kubernetes secret")
 	}
@@ -589,51 +571,71 @@ func (c *cluster) reportTelemetry() {
 	telemetry.ReportKeyValue(c.context, c.ClusterInfo, telemetry.DeviceSetNonPortableKey, strconv.Itoa(nonportableDeviceSets))
 
 	// Set the telemetry for network settings
-	telemetry.ReportKeyValue(c.context, c.ClusterInfo, telemetry.NetworkProviderKey, c.Spec.Network.Provider)
+	telemetry.ReportKeyValue(c.context, c.ClusterInfo, telemetry.NetworkProviderKey, string(c.Spec.Network.Provider))
 
 	// Set the telemetry for external cluster settings
 	telemetry.ReportKeyValue(c.context, c.ClusterInfo, telemetry.ExternalModeEnabledKey, strconv.FormatBool(c.Spec.External.Enable))
 }
 
 func (c *cluster) configureMsgr2() error {
-	if c.Spec.Network.Connections == nil {
-		return nil
+	encryptionSetting := "secure"
+	rbdMapOptions := "rbd_default_map_options"
+	encryptionGlobalConfigSettings := map[string]string{
+		"ms_cluster_mode": encryptionSetting,
+		"ms_service_mode": encryptionSetting,
+		"ms_client_mode":  encryptionSetting,
+		rbdMapOptions:     "ms_mode=secure",
 	}
-
-	// Set network encryption
 	monStore := config.GetMonStore(c.context, c.ClusterInfo)
-	if c.Spec.Network.Connections.Encryption != nil {
-		encryptionSetting := "crc secure"
-		if c.Spec.Network.Connections.Encryption.Enabled {
-			encryptionSetting = "secure"
-		}
-		logger.Infof("setting msgr2 encryption mode to %q", encryptionSetting)
 
-		if err := monStore.Set("global", "ms_cluster_mode", encryptionSetting); err != nil {
-			return errors.Wrapf(err, "failed to set ms_cluster_mode to %q", encryptionSetting)
+	encryptionEnabled := c.Spec.Network.Connections != nil &&
+		c.Spec.Network.Connections.Encryption != nil &&
+		c.Spec.Network.Connections.Encryption.Enabled
+
+	if encryptionEnabled {
+		logger.Infof("setting msgr2 encryption mode to %q", encryptionSetting)
+		if err := monStore.SetAll("global", encryptionGlobalConfigSettings); err != nil {
+			return err
 		}
-		if err := monStore.Set("global", "ms_service_mode", encryptionSetting); err != nil {
-			return errors.Wrapf(err, "failed to set ms_service_mode to %q", encryptionSetting)
+	} else {
+		encryptionConfig := []config.Option{}
+		for k := range encryptionGlobalConfigSettings {
+			encryptionConfig = append(encryptionConfig, config.Option{Who: "global", Option: k})
 		}
-		if err := monStore.Set("global", "ms_client_mode", encryptionSetting); err != nil {
-			return errors.Wrapf(err, "failed to set ms_client_mode to %q", encryptionSetting)
+		if err := monStore.DeleteAll(encryptionConfig...); err != nil {
+			return errors.Wrap(err, "failed to delete msgr2 encryption settings")
+		}
+
+		// set default rbd map options to enable msgr2 in the kernel if it's
+		// required even with encryption disabled
+		if c.Spec.RequireMsgr2() {
+			if err := monStore.SetAll("global", map[string]string{rbdMapOptions: "ms_mode=prefer-crc"}); err != nil {
+				return err
+			}
 		}
 	}
-
 	// Set network compression
-	if c.Spec.Network.Connections.Compression != nil {
-		if c.ClusterInfo.CephVersion.IsAtLeastQuincy() {
-			compressionSetting := "none"
-			if c.Spec.Network.Connections.Compression.Enabled {
-				compressionSetting = "force"
+	if c.ClusterInfo.CephVersion.IsAtLeastQuincy() {
+		if c.Spec.Network.Connections == nil || c.Spec.Network.Connections.Compression == nil || !c.Spec.Network.Connections.Compression.Enabled {
+			encryptionConfig := []config.Option{
+				{Who: "global", Option: "ms_osd_compress_mode"},
 			}
-			logger.Infof("setting msgr2 compression mode to %q", compressionSetting)
-			if err := monStore.Set("global", "ms_osd_compress_mode", compressionSetting); err != nil {
-				return errors.Wrapf(err, "failed to set ms_osd_compress_mode to %q", compressionSetting)
+			if err := monStore.DeleteAll(encryptionConfig...); err != nil {
+				return errors.Wrap(err, "failed to delete msgr2 compression settings")
 			}
 		} else {
-			logger.Warningf("network compression requires Ceph Quincy (v17) or newer, skipping for current ceph %q", c.ClusterInfo.CephVersion.String())
+			globalConfigSettings := map[string]string{
+				"ms_osd_compress_mode": "force",
+			}
+			logger.Infof("setting msgr2 compression mode to %q", "force")
+			if err := monStore.SetAll("global", globalConfigSettings); err != nil {
+				return err
+			}
 		}
+
+	} else {
+		logger.Warningf("network compression requires Ceph Quincy (v17) or newer, skipping for current ceph %q", c.ClusterInfo.CephVersion.String())
 	}
+
 	return nil
 }

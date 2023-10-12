@@ -9,10 +9,10 @@ metadata:
   namespace: {{ .Release.Namespace }} # namespace:cluster
 rules:
   # this is needed for rook's "key-management" CLI to fetch the vault token from the secret when
-  # validating the connection details
+  # validating the connection details and for key rotation operations.
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get"]
+    verbs: ["get","update"]
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "delete"]
@@ -70,9 +70,31 @@ rules:
   - apiGroups:
       - ceph.rook.io
     resources:
-      - "*"
+      - cephclients
+      - cephclusters
+      - cephblockpools
+      - cephfilesystems
+      - cephnfses
+      - cephobjectstores
+      - cephobjectstoreusers
+      - cephobjectrealms
+      - cephobjectzonegroups
+      - cephobjectzones
+      - cephbuckettopics
+      - cephbucketnotifications
+      - cephrbdmirrors
+      - cephfilesystemmirrors
+      - cephfilesystemsubvolumegroups
+      - cephblockpoolradosnamespaces
+      - cephcosidrivers
     verbs:
-      - "*"
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - delete
+      - patch
   - apiGroups:
       - apps
     resources:

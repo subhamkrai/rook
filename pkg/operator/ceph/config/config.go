@@ -114,42 +114,26 @@ func SetOrRemoveDefaultConfigs(
 	// or they are specified on the commandline when daemons are called.
 	monStore := GetMonStore(context, clusterInfo)
 
-	if err := monStore.SetAll(DefaultCentralizedConfigs(clusterInfo.CephVersion)...); err != nil {
+	if err := monStore.SetAll("global", DefaultCentralizedConfigs(clusterInfo.CephVersion)); err != nil {
 		return errors.Wrapf(err, "failed to apply default Ceph configurations")
 	}
 
 	// When enabled the collector will logrotate logs from files
 	if clusterSpec.LogCollector.Enabled {
 		// Override "log file" for existing clusters since it is empty
-		logOptions := []Option{
-			configOverride("global", "log to file", "true"),
+		logOptions := map[string]string{
+			"log to file": "true",
 		}
-
-		if err := monStore.SetAll(logOptions...); err != nil {
+		if err := monStore.SetAll("global", logOptions); err != nil {
 			return errors.Wrapf(err, "failed to apply logging configuration for log collector")
 		}
 		// If the log collector is disabled we do not log to file since we collect nothing
 	} else {
-		logOptions := []Option{
-			configOverride("global", "log to file", "false"),
+		logOptions := map[string]string{
+			"log to file": "false",
 		}
-
-		if err := monStore.SetAll(logOptions...); err != nil {
+		if err := monStore.SetAll("global", logOptions); err != nil {
 			return errors.Wrapf(err, "failed to apply logging configuration")
-		}
-	}
-
-	// Apply Multus if needed
-	if clusterSpec.Network.IsMultus() {
-		logger.Info("configuring ceph network(s) with multus")
-		cephNetworks, err := generateNetworkSettings(clusterInfo.Context, context, clusterInfo.Namespace, clusterSpec.Network.Selectors)
-		if err != nil {
-			return errors.Wrap(err, "failed to generate network settings")
-		}
-
-		// Apply ceph network settings to the mon config store
-		if err := monStore.SetAll(cephNetworks...); err != nil {
-			return errors.Wrap(err, "failed to network config overrides")
 		}
 	}
 
@@ -183,9 +167,6 @@ func canDisableInsecureGlobalID(clusterInfo *cephclient.ClusterInfo) bool {
 		return true
 	}
 	if cephver.IsPacific() && cephver.IsAtLeast(version.CephVersion{Major: 16, Minor: 2, Extra: 1}) {
-		return true
-	}
-	if cephver.IsOctopus() && cephver.IsAtLeast(version.CephVersion{Major: 15, Minor: 2, Extra: 11}) {
 		return true
 	}
 	return false

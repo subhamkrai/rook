@@ -17,6 +17,8 @@ limitations under the License.
 package nfs
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
@@ -33,10 +35,11 @@ import (
 
 const (
 	// AppName is the name of the app
-	AppName             = "rook-ceph-nfs"
-	ganeshaConfigVolume = "ganesha-config"
-	nfsPort             = 2049
-	ganeshaPid          = "/var/run/ganesha/ganesha.pid"
+	AppName               = "rook-ceph-nfs"
+	ganeshaConfigVolume   = "ganesha-config"
+	nfsPort               = 2049
+	ganeshaPid            = "/var/run/ganesha/ganesha.pid"
+	nfsGaneshaMetricsPort = 9587
 )
 
 func (r *ReconcileCephNFS) generateCephNFSService(nfs *cephv1.CephNFS, cfg daemonConfig) *v1.Service {
@@ -57,11 +60,18 @@ func (r *ReconcileCephNFS) generateCephNFSService(nfs *cephv1.CephNFS, cfg daemo
 					TargetPort: intstr.FromInt(int(nfsPort)),
 					Protocol:   v1.ProtocolTCP,
 				},
+				{
+					Name:       "nfs-metrics",
+					Port:       nfsGaneshaMetricsPort,
+					TargetPort: intstr.FromInt(int(nfsGaneshaMetricsPort)),
+					Protocol:   v1.ProtocolTCP,
+				},
 			},
 		},
 	}
 
-	if r.cephClusterSpec.Network.IsHost() {
+	hostNetwork := nfs.IsHostNetwork(r.cephClusterSpec)
+	if hostNetwork {
 		svc.Spec.ClusterIP = v1.ClusterIPNone
 	}
 
@@ -99,6 +109,11 @@ func (r *ReconcileCephNFS) makeDeployment(nfs *cephv1.CephNFS, cfg daemonConfig)
 			Labels:    getLabels(nfs, cfg.ID, true),
 		},
 	}
+
+	// If host network is defined on Spec.Server.HostNetwork, use it.
+	// elsedefault to whatever the cluster has defined
+	hostNetwork := nfs.IsHostNetwork(r.cephClusterSpec)
+
 	k8sutil.AddRookVersionLabelToDeployment(deployment)
 	controller.AddCephVersionLabelToDeployment(r.clusterInfo.CephVersion, deployment)
 	nfs.Spec.Server.Annotations.ApplyToObjectMeta(&deployment.ObjectMeta)
@@ -126,16 +141,24 @@ func (r *ReconcileCephNFS) makeDeployment(nfs *cephv1.CephNFS, cfg daemonConfig)
 			nfsConfigVol,
 			dbusVol,
 		},
-		HostNetwork:       r.cephClusterSpec.Network.IsHost(),
+		HostNetwork:       hostNetwork,
 		PriorityClassName: nfs.Spec.Server.PriorityClassName,
+		// for kerberos, nfs-ganesha uses the hostname via getaddrinfo() and uses that when
+		// connecting to the krb server. give all ganesha servers the same hostname so they can all
+		// use the same krb credentials to auth
+		Hostname: fmt.Sprintf("%s-%s", nfs.Namespace, nfs.Name),
 	}
 	// Replace default unreachable node toleration
 	k8sutil.AddUnreachableNodeToleration(&podSpec)
 
-	if r.cephClusterSpec.Network.IsHost() {
+	if hostNetwork {
 		podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
 	}
 	nfs.Spec.Server.Placement.ApplyToPodSpec(&podSpec)
+
+	if err := r.addSecurityConfigsToPod(nfs, &podSpec); err != nil {
+		return nil, err
+	}
 
 	podTemplateSpec := v1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,10 +174,10 @@ func (r *ReconcileCephNFS) makeDeployment(nfs *cephv1.CephNFS, cfg daemonConfig)
 		Spec: podSpec,
 	}
 
-	if r.cephClusterSpec.Network.IsHost() {
+	if hostNetwork {
 		podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
 	} else if r.cephClusterSpec.Network.IsMultus() {
-		if err := k8sutil.ApplyMultus(r.cephClusterSpec.Network, &podTemplateSpec.ObjectMeta); err != nil {
+		if err := k8sutil.ApplyMultus(r.clusterInfo.Namespace, &r.cephClusterSpec.Network, &podTemplateSpec.ObjectMeta); err != nil {
 			return nil, err
 		}
 	}
@@ -182,6 +205,7 @@ func (r *ReconcileCephNFS) connectionConfigInitContainer(nfs *cephv1.CephNFS, na
 		getNFSClientID(nfs, name),
 		keyring.VolumeMount().KeyringFilePath(),
 		r.cephClusterSpec.CephVersion.Image,
+		r.cephClusterSpec.CephVersion.ImagePullPolicy,
 		[]v1.VolumeMount{
 			cephConfigMount,
 			keyring.VolumeMount().Resource(instanceName(nfs, name)),
@@ -211,14 +235,15 @@ func (r *ReconcileCephNFS) daemonContainer(nfs *cephv1.CephNFS, cfg daemonConfig
 			"-p", ganeshaPid, // PID file location
 			"-N", logLevel, // Change Log level
 		},
-		Image: r.cephClusterSpec.CephVersion.Image,
+		Image:           r.cephClusterSpec.CephVersion.Image,
+		ImagePullPolicy: controller.GetContainerImagePullPolicy(r.cephClusterSpec.CephVersion.ImagePullPolicy),
 		VolumeMounts: []v1.VolumeMount{
 			cephConfigMount,
 			keyring.VolumeMount().Resource(instanceName(nfs, cfg.ID)),
 			nfsConfigMount,
 			dbusMount,
 		},
-		Env:             controller.DaemonEnvVars(r.cephClusterSpec.CephVersion.Image),
+		Env:             controller.DaemonEnvVars(r.cephClusterSpec),
 		Resources:       nfs.Spec.Server.Resources,
 		SecurityContext: controller.PodSecurityContext(),
 	}
@@ -226,6 +251,9 @@ func (r *ReconcileCephNFS) daemonContainer(nfs *cephv1.CephNFS, cfg daemonConfig
 
 func (r *ReconcileCephNFS) dbusContainer(nfs *cephv1.CephNFS) v1.Container {
 	_, dbusMount := dbusVolumeAndMount()
+
+	// uid of the "dbus" user in most (all?) Linux distributions
+	dbusUID := int64(81)
 
 	return v1.Container{
 		Name: "dbus-daemon",
@@ -238,12 +266,16 @@ func (r *ReconcileCephNFS) dbusContainer(nfs *cephv1.CephNFS) v1.Container {
 			"--nopidfile", // don't write a pid file
 			// some dbus-daemon versions have flag --nosyslog to send logs to sterr; not ceph upstream image
 		},
-		Image: r.cephClusterSpec.CephVersion.Image,
+		Image:           r.cephClusterSpec.CephVersion.Image,
+		ImagePullPolicy: controller.GetContainerImagePullPolicy(r.cephClusterSpec.CephVersion.ImagePullPolicy),
 		VolumeMounts: []v1.VolumeMount{
 			dbusMount,
 		},
 		Env:       k8sutil.ClusterDaemonEnvVars(r.cephClusterSpec.CephVersion.Image), // do not need access to Ceph env vars b/c not a Ceph daemon
 		Resources: nfs.Spec.Server.Resources,
+		SecurityContext: &v1.SecurityContext{
+			RunAsUser: &dbusUID,
+		},
 	}
 }
 

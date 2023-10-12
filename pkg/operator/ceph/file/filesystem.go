@@ -61,10 +61,8 @@ func createFilesystem(
 			return errors.Wrapf(err, "failed to create filesystem %q", fs.Name)
 		}
 	}
-	if fs.Spec.MetadataServer.ActiveStandby {
-		if err := cephclient.AllowStandbyReplay(context, clusterInfo, fs.Name, fs.Spec.MetadataServer.ActiveStandby); err != nil {
-			return errors.Wrapf(err, "failed to set allow_standby_replay to filesystem %q", fs.Name)
-		}
+	if err := cephclient.AllowStandbyReplay(context, clusterInfo, fs.Name, fs.Spec.MetadataServer.ActiveStandby); err != nil {
+		return errors.Wrapf(err, "failed to set allow_standby_replay to filesystem %q", fs.Name)
 	}
 
 	// set the number of active mds instances
@@ -220,16 +218,6 @@ func (f *Filesystem) doFilesystemCreate(context *clusterd.Context, clusterInfo *
 		return errors.New("at least one data pool must be specified")
 	}
 
-	fslist, err := cephclient.ListFilesystems(context, clusterInfo)
-	if err != nil {
-		return errors.Wrap(err, "failed to list existing filesystem(s)")
-	}
-	// This check prevents from concurrent CephFilesystem CRD trying to create a filesystem
-	// Whoever gets to create the Filesystem first wins the race, then we fail if that cluster is not Ceph Pacific and one Filesystem is present
-	if len(fslist) > 0 && !clusterInfo.CephVersion.IsAtLeastPacific() {
-		return errors.New("multiple filesystems are only supported as of ceph pacific")
-	}
-
 	poolNames, err := cephclient.GetPoolNamesByID(context, clusterInfo)
 	if err != nil {
 		return errors.Wrap(err, "failed to get pool names")
@@ -271,7 +259,7 @@ func (f *Filesystem) doFilesystemCreate(context *clusterd.Context, clusterInfo *
 		}
 	}
 
-	// create the filesystem ('fs new' needs to be forced in order to reuse pre-existing pools)
+	// create the filesystem ('fs new' needs to be forced in order to reuse preexisting pools)
 	// if only one pool is created new it won't work (to avoid inconsistencies).
 	if err := cephclient.CreateFilesystem(context, clusterInfo, f.Name, metadataPool.Name, dataPoolNames); err != nil {
 		return err

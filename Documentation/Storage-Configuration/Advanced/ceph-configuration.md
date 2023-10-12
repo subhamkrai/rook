@@ -159,26 +159,20 @@ a common practice for those looking to target certain workloads onto faster
 
 !!! note
     Since Ceph Nautilus (v14.x), you can use the Ceph MGR `pg_autoscaler`
-    module to auto scale the PGs as needed. If you want to enable this feature,
-    please refer to [Default PG and PGP counts](ceph-configuration.md#default-pg-and-pgp-counts).
+    module to auto scale the PGs as needed. It is highly advisable to configure
+    default pg_num value on per-pool basis, If you want to enable this feature,
+    please refer to [Default PG and PGP
+    counts](configuration.md#default-pg-and-pgp-counts).
 
 The general rules for deciding how many PGs your pool(s) should contain is:
 
-* Less than 5 OSDs set pg_num to 128
-* Between 5 and 10 OSDs set pg_num to 512
-* Between 10 and 50 OSDs set pg_num to 1024
+* Fewer than 5 OSDs set `pg_num` to 128
+* Between 5 and 10 OSDs set `pg_num` to 512
+* Between 10 and 50 OSDs set `pg_num` to 1024
 
 If you have more than 50 OSDs, you need to understand the tradeoffs and how to
 calculate the pg_num value by yourself. For calculating pg_num yourself please
-make use of [the pgcalc tool](http://ceph.com/pgcalc/).
-
-If you're already using a pool it is generally safe to [increase its PG
-count](#setting-pg-count) on-the-fly. Decreasing the PG count is not
-recommended on a pool that is in use. The safest way to decrease the PG count
-is to back-up the data, [delete the pool](#deleting-a-pool), and [recreate
-it](#creating-a-pool).  With backups you can try a few potentially unsafe
-tricks for live pools, documented
-[here](http://cephnotes.ksperis.com/blog/2015/04/15/ceph-pool-migration).
+make use of [the pgcalc tool](https://old.ceph.com/pgcalc/).
 
 ### Setting PG Count
 
@@ -200,9 +194,9 @@ ceph osd pool set rbd pg_num 512
     less configurable from the CLI and dashboard and may make future tuning or debugging difficult.
 
 Setting configs via Ceph's CLI requires that at least one mon be available for the configs to be
-set, and setting configs via dashboard requires at least one mgr to be available. Ceph may also have
-a small number of very advanced settings that aren't able to be modified easily via CLI or
-dashboard. In order to set configurations before monitors are available or to set problematic
+set, and setting configs via dashboard requires at least one mgr to be available. Ceph also has
+a number of very advanced settings that cannot be modified easily via the CLI or
+dashboard. In order to set configurations before monitors are available or to set advanced
 configuration settings, the `rook-config-override` ConfigMap exists, and the `config` field can be
 set with the contents of a `ceph.conf` file. The contents will be propagated to all mon, mgr, OSD,
 MDS, and RGW daemons as an `/etc/ceph/ceph.conf` file.
@@ -360,8 +354,8 @@ is for an OSD to become a Primary using the Primary Affinity setting.  This is
 similar to the OSD weight setting, except it only affects reads on the storage
 device, not capacity or writes.
 
-In this example we will make sure `osd.0` is only selected as Primary if all
-other OSDs holding replica data are unavailable:
+In this example we will ensure that `osd.0` is only selected as Primary if all
+other OSDs holding data replicas are unavailable:
 
 ```console
 ceph osd primary-affinity osd.0 0
@@ -369,15 +363,22 @@ ceph osd primary-affinity osd.0 0
 
 ## OSD Dedicated Network
 
+!!! tip
+    This documentation is left for historical purposes. It is still valid, but Rook offers native
+    support for this feature via the
+    [CephCluster network configuration](../../CRDs/Cluster/ceph-cluster-crd.md#ceph-public-and-cluster-networks).
+
 It is possible to configure ceph to leverage a dedicated network for the OSDs to
-communicate across. A useful overview is the [CEPH Networks](http://docs.ceph.com/docs/master/rados/configuration/network-config-ref/#ceph-networks)
+communicate across. A useful overview is the [Ceph Networks](http://docs.ceph.com/docs/master/rados/configuration/network-config-ref/#ceph-networks)
 section of the Ceph documentation. If you declare a cluster network, OSDs will
-route heartbeat, object replication and recovery traffic over the cluster
-network. This may improve performance compared to using a single network.
+route heartbeat, object replication, and recovery traffic over the cluster
+network. This may improve performance compared to using a single network,
+especially when slower network technologies are used. The tradeoff is
+additional expense and subtle failure modes.
 
 Two changes are necessary to the configuration to enable this capability:
 
-### Use hostNetwork in the rook ceph cluster configuration
+### Use hostNetwork in the cluster configuration
 
 Enable the `hostNetwork` setting in the [Ceph Cluster CRD configuration](../../CRDs/Cluster/ceph-cluster-crd.md#samples).
 For example,
@@ -408,7 +409,7 @@ apiVersion: v1
 data:
   config: |
     [global]
-    public network =  10.0.7.0/24
+    public network = 10.0.7.0/24
     cluster network = 10.0.10.0/24
     public addr = ""
     cluster addr = ""
@@ -464,7 +465,7 @@ ceph osd tree
 
 ### To scale OSDs Vertically
 
-Run the following script to auto-grow the size of OSDs on a PVC-based Rook-Ceph cluster whenever the OSDs have reached the storage near-full threshold.
+Run the following script to auto-grow the size of OSDs on a PVC-based Rook cluster whenever the OSDs have reached the storage near-full threshold.
 
 ```console
 tests/scripts/auto-grow-storage.sh size  --max maxSize --growth-rate percent
@@ -480,7 +481,7 @@ For example, if you need to increase the size of OSD by 30% and max disk size is
 
 ### To scale OSDs Horizontally
 
-Run the following script to auto-grow the number of OSDs on a PVC-based Rook-Ceph cluster whenever the OSDs have reached the storage near-full threshold.
+Run the following script to auto-grow the number of OSDs on a PVC-based Rook cluster whenever the OSDs have reached the storage near-full threshold.
 
 ```console
 tests/scripts/auto-grow-storage.sh count --max maxCount --count rate

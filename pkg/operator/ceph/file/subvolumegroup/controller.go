@@ -98,7 +98,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephFilesystemSubVolumeGroup CRD object
-	err = c.Watch(&source.Kind{Type: &cephv1.CephFilesystemSubVolumeGroup{TypeMeta: controllerTypeMeta}}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
+	err = c.Watch(source.Kind(mgr.GetCache(), &cephv1.CephFilesystemSubVolumeGroup{TypeMeta: controllerTypeMeta}), &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) reconcile(request reconcile.Requ
 	}
 
 	// Populate clusterInfo during each reconcile
-	r.clusterInfo, _, _, err = opcontroller.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace)
+	r.clusterInfo, _, _, err = opcontroller.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace, &cephCluster.Spec)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to populate cluster info")
 	}
@@ -267,7 +267,7 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) updateClusterConfig(cephFilesyst
 	// config map, so no special care is needed in this controller
 	csiClusterConfigEntry := csi.CsiClusterConfigEntry{
 		Namespace: r.clusterInfo.Namespace,
-		Monitors:  csi.MonEndpoints(r.clusterInfo.Monitors),
+		Monitors:  csi.MonEndpoints(r.clusterInfo.Monitors, cephCluster.Spec.RequireMsgr2()),
 		CephFS: &csi.CsiCephFSSpec{
 			SubvolumeGroup: cephFilesystemSubVolumeGroup.Name,
 		},
@@ -276,7 +276,7 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) updateClusterConfig(cephFilesyst
 	// If the cluster has Multus enabled we need to append the network namespace of the driver's
 	// holder DaemonSet in the csi configmap
 	if cephCluster.Spec.Network.IsMultus() {
-		netNamespaceFilePath, err := csi.GenerateNetNamespaceFilePath(r.opManagerContext, r.client, cephCluster.ClusterName, r.opConfig.OperatorNamespace, csi.CephFSDriverShortName)
+		netNamespaceFilePath, err := csi.GenerateNetNamespaceFilePath(r.opManagerContext, r.client, cephCluster.Name, r.opConfig.OperatorNamespace, csi.CephFSDriverShortName)
 		if err != nil {
 			return errors.Wrap(err, "failed to generate cephfs net namespace file path")
 		}

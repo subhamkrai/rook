@@ -104,7 +104,7 @@ func newCluster(context *clusterd.Context, namespace string, allowMultiplePerNod
 		ClusterInfo: nil,
 		context:     context,
 		Namespace:   namespace,
-		rookVersion: "myversion",
+		rookImage:   "myversion",
 		spec: cephv1.ClusterSpec{
 			Mon: cephv1.MonSpec{
 				Count:                3,
@@ -123,11 +123,11 @@ func newCluster(context *clusterd.Context, namespace string, allowMultiplePerNod
 }
 
 // setCommonMonProperties is a convenience helper for setting common test properties
-func setCommonMonProperties(c *Cluster, currentMons int, mon cephv1.MonSpec, rookVersion string) {
+func setCommonMonProperties(c *Cluster, currentMons int, mon cephv1.MonSpec, rookImage string) {
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(currentMons)
 	c.spec.Mon.Count = mon.Count
 	c.spec.Mon.AllowMultiplePerNode = mon.AllowMultiplePerNode
-	c.rookVersion = rookVersion
+	c.rookImage = rookImage
 }
 
 func TestResourceName(t *testing.T) {
@@ -186,7 +186,7 @@ func TestStartMonPods(t *testing.T) {
 	}
 
 	// start a basic cluster
-	_, err = c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	_, err = c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
 
 	// test annotations
@@ -197,7 +197,7 @@ func TestStartMonPods(t *testing.T) {
 	validateStart(t, c)
 
 	// starting again should be a no-op
-	_, err = c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	_, err = c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
 
 	validateStart(t, c)
@@ -211,9 +211,9 @@ func TestOperatorRestart(t *testing.T) {
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(1)
 
 	// start a basic cluster
-	info, err := c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	info, err := c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
-	assert.True(t, info.IsInitialized(true))
+	assert.NoError(t, info.IsInitialized())
 
 	validateStart(t, c)
 
@@ -221,9 +221,9 @@ func TestOperatorRestart(t *testing.T) {
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(1)
 
 	// starting again should be a no-op, but will not result in an error
-	info, err = c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	info, err = c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
-	assert.True(t, info.IsInitialized(true))
+	assert.NoError(t, info.IsInitialized())
 
 	validateStart(t, c)
 }
@@ -239,9 +239,9 @@ func TestOperatorRestartHostNetwork(t *testing.T) {
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(1)
 
 	// start a basic cluster
-	info, err := c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	info, err := c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
-	assert.True(t, info.IsInitialized(true))
+	assert.NoError(t, info.IsInitialized())
 
 	validateStart(t, c)
 
@@ -251,9 +251,9 @@ func TestOperatorRestartHostNetwork(t *testing.T) {
 	c.ClusterInfo = clienttest.CreateTestClusterInfo(1)
 
 	// starting again should be a no-op, but still results in an error
-	info, err = c.Start(c.ClusterInfo, c.rookVersion, cephver.Octopus, c.spec)
+	info, err = c.Start(c.ClusterInfo, c.rookImage, cephver.Quincy, c.spec)
 	assert.NoError(t, err)
-	assert.True(t, info.IsInitialized(true), info)
+	assert.NoError(t, info.IsInitialized(), info)
 
 	validateStart(t, c)
 }
@@ -473,7 +473,7 @@ func TestConfigureArbiter(t *testing.T) {
 	c := &Cluster{spec: cephv1.ClusterSpec{
 		Mon: cephv1.MonSpec{
 			StretchCluster: &cephv1.StretchClusterSpec{
-				Zones: []cephv1.StretchClusterZoneSpec{
+				Zones: []cephv1.MonZoneSpec{
 					{Name: "a", Arbiter: true},
 					{Name: "b"},
 					{Name: "c"},
@@ -526,22 +526,20 @@ func TestConfigureArbiter(t *testing.T) {
 	})
 }
 
-func TestFindAvailableZoneForStretchedMon(t *testing.T) {
+func TestFindAvailableZoneMon(t *testing.T) {
 	c := &Cluster{spec: cephv1.ClusterSpec{
 		Mon: cephv1.MonSpec{
-			StretchCluster: &cephv1.StretchClusterSpec{
-				Zones: []cephv1.StretchClusterZoneSpec{
-					{Name: "a", Arbiter: true},
-					{Name: "b"},
-					{Name: "c"},
-				},
+			Zones: []cephv1.MonZoneSpec{
+				{Name: "a"},
+				{Name: "b"},
+				{Name: "c"},
 			},
 		},
 	}}
 
 	// No mons are assigned to a zone yet
 	existingMons := []*monConfig{}
-	availableZone, err := c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err := c.findAvailableZone(existingMons)
 	assert.NoError(t, err)
 	assert.NotEqual(t, "", availableZone)
 
@@ -551,7 +549,7 @@ func TestFindAvailableZoneForStretchedMon(t *testing.T) {
 		{ResourceName: "y", Zone: "b"},
 	}
 	c.spec.Mon.Count = 3
-	availableZone, err = c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err = c.findAvailableZone(existingMons)
 	assert.NoError(t, err)
 	assert.Equal(t, "c", availableZone)
 
@@ -562,7 +560,47 @@ func TestFindAvailableZoneForStretchedMon(t *testing.T) {
 		{ResourceName: "z", Zone: "c"},
 	}
 	c.spec.Mon.Count = 3
-	availableZone, err = c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err = c.findAvailableZone(existingMons)
+	assert.Error(t, err)
+	assert.Equal(t, "", availableZone)
+}
+func TestFindAvailableZoneForStretchedMon(t *testing.T) {
+	c := &Cluster{spec: cephv1.ClusterSpec{
+		Mon: cephv1.MonSpec{
+			StretchCluster: &cephv1.StretchClusterSpec{
+				Zones: []cephv1.MonZoneSpec{
+					{Name: "a", Arbiter: true},
+					{Name: "b"},
+					{Name: "c"},
+				},
+			},
+		},
+	}}
+
+	// No mons are assigned to a zone yet
+	existingMons := []*monConfig{}
+	availableZone, err := c.findAvailableZone(existingMons)
+	assert.NoError(t, err)
+	assert.NotEqual(t, "", availableZone)
+
+	// With 3 mons, we have one available zone
+	existingMons = []*monConfig{
+		{ResourceName: "x", Zone: "a"},
+		{ResourceName: "y", Zone: "b"},
+	}
+	c.spec.Mon.Count = 3
+	availableZone, err = c.findAvailableZone(existingMons)
+	assert.NoError(t, err)
+	assert.Equal(t, "c", availableZone)
+
+	// With 3 mons and no available zones
+	existingMons = []*monConfig{
+		{ResourceName: "x", Zone: "a"},
+		{ResourceName: "y", Zone: "b"},
+		{ResourceName: "z", Zone: "c"},
+	}
+	c.spec.Mon.Count = 3
+	availableZone, err = c.findAvailableZone(existingMons)
 	assert.Error(t, err)
 	assert.Equal(t, "", availableZone)
 
@@ -575,7 +613,7 @@ func TestFindAvailableZoneForStretchedMon(t *testing.T) {
 		{ResourceName: "q", Zone: "c"},
 	}
 	c.spec.Mon.Count = 5
-	availableZone, err = c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err = c.findAvailableZone(existingMons)
 	assert.Error(t, err)
 	assert.Equal(t, "", availableZone)
 
@@ -586,7 +624,7 @@ func TestFindAvailableZoneForStretchedMon(t *testing.T) {
 		{ResourceName: "y", Zone: "b"},
 		{ResourceName: "z", Zone: "c"},
 	}
-	availableZone, err = c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err = c.findAvailableZone(existingMons)
 	assert.NoError(t, err)
 	assert.Equal(t, "c", availableZone)
 
@@ -597,11 +635,52 @@ func TestFindAvailableZoneForStretchedMon(t *testing.T) {
 		{ResourceName: "y", Zone: "c"},
 		{ResourceName: "z", Zone: "c"},
 	}
-	availableZone, err = c.findAvailableZoneIfStretched(existingMons)
+	availableZone, err = c.findAvailableZone(existingMons)
 	assert.NoError(t, err)
 	assert.Equal(t, "a", availableZone)
 }
 
+func TestMonVolumeClaimTemplate(t *testing.T) {
+	generalSC := "generalSC"
+	zoneSC := "zoneSC"
+	defaultTemplate := &v1.PersistentVolumeClaim{Spec: v1.PersistentVolumeClaimSpec{StorageClassName: &generalSC}}
+	zoneTemplate := &v1.PersistentVolumeClaim{Spec: v1.PersistentVolumeClaimSpec{StorageClassName: &zoneSC}}
+	type fields struct {
+		spec cephv1.ClusterSpec
+	}
+	type args struct {
+		mon *monConfig
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *v1.PersistentVolumeClaim
+	}{
+		{"no template", fields{cephv1.ClusterSpec{}}, args{&monConfig{Zone: "z1"}}, nil},
+		{"default template", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{VolumeClaimTemplate: defaultTemplate}}}, args{&monConfig{Zone: "z1"}}, defaultTemplate},
+		{"default template with 3 zones", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{
+			VolumeClaimTemplate: defaultTemplate,
+			Zones:               []cephv1.MonZoneSpec{{Name: "z1"}, {Name: "z2"}, {Name: "z3"}}}}},
+			args{&monConfig{Zone: "z1"}},
+			defaultTemplate},
+		{"overridden template", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{
+			VolumeClaimTemplate: defaultTemplate,
+			Zones:               []cephv1.MonZoneSpec{{Name: "z1", VolumeClaimTemplate: zoneTemplate}, {Name: "z2"}, {Name: "z3"}}}}},
+			args{&monConfig{Zone: "z1"}},
+			zoneTemplate},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Cluster{
+				spec: tt.fields.spec,
+			}
+			if got := c.monVolumeClaimTemplate(tt.args.mon); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Cluster.monVolumeClaimTemplate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 func TestStretchMonVolumeClaimTemplate(t *testing.T) {
 	generalSC := "generalSC"
 	zoneSC := "zoneSC"
@@ -623,12 +702,12 @@ func TestStretchMonVolumeClaimTemplate(t *testing.T) {
 		{"default template", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{VolumeClaimTemplate: defaultTemplate}}}, args{&monConfig{Zone: "z1"}}, defaultTemplate},
 		{"default template with 3 zones", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{
 			VolumeClaimTemplate: defaultTemplate,
-			StretchCluster:      &cephv1.StretchClusterSpec{Zones: []cephv1.StretchClusterZoneSpec{{Name: "z1"}, {Name: "z2"}, {Name: "z3"}}}}}},
+			StretchCluster:      &cephv1.StretchClusterSpec{Zones: []cephv1.MonZoneSpec{{Name: "z1"}, {Name: "z2"}, {Name: "z3"}}}}}},
 			args{&monConfig{Zone: "z1"}},
 			defaultTemplate},
 		{"overridden template", fields{cephv1.ClusterSpec{Mon: cephv1.MonSpec{
 			VolumeClaimTemplate: defaultTemplate,
-			StretchCluster:      &cephv1.StretchClusterSpec{Zones: []cephv1.StretchClusterZoneSpec{{Name: "z1", VolumeClaimTemplate: zoneTemplate}, {Name: "z2"}, {Name: "z3"}}}}}},
+			StretchCluster:      &cephv1.StretchClusterSpec{Zones: []cephv1.MonZoneSpec{{Name: "z1", VolumeClaimTemplate: zoneTemplate}, {Name: "z2"}, {Name: "z3"}}}}}},
 			args{&monConfig{Zone: "z1"}},
 			zoneTemplate},
 	}
@@ -665,7 +744,7 @@ func TestArbiterPlacement(t *testing.T) {
 	c := &Cluster{spec: cephv1.ClusterSpec{
 		Mon: cephv1.MonSpec{
 			StretchCluster: &cephv1.StretchClusterSpec{
-				Zones: []cephv1.StretchClusterZoneSpec{
+				Zones: []cephv1.MonZoneSpec{
 					{Name: "a", Arbiter: true},
 					{Name: "b"},
 					{Name: "c"},
@@ -701,7 +780,7 @@ func TestCheckIfArbiterReady(t *testing.T) {
 		spec: cephv1.ClusterSpec{
 			Mon: cephv1.MonSpec{
 				StretchCluster: &cephv1.StretchClusterSpec{
-					Zones: []cephv1.StretchClusterZoneSpec{
+					Zones: []cephv1.MonZoneSpec{
 						{Name: "a", Arbiter: true},
 						{Name: "b"},
 						{Name: "c"},

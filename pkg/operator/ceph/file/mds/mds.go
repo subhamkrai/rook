@@ -38,6 +38,7 @@ import (
 	"github.com/rook/rook/pkg/util/exec"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mds")
@@ -179,7 +180,8 @@ func (c *Cluster) startDeployment(ctx context.Context, daemonLetterID string) (s
 	}
 
 	// start the deployment
-	d, err := c.makeDeployment(mdsConfig, c.fs.Namespace)
+	fsNamespacedname := types.NamespacedName{Name: c.fs.Name, Namespace: c.fs.Namespace}
+	d, err := c.makeDeployment(mdsConfig, fsNamespacedname)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create deployment")
 	}
@@ -385,8 +387,7 @@ func finishedWithDaemonUpgrade(context *clusterd.Context, clusterInfo *cephclien
 	activeMDSCount := fs.Spec.MetadataServer.ActiveCount
 	logger.Debugf("restoring filesystem %s from daemon upgrade", fsName)
 	logger.Debugf("bringing num active MDS daemons for fs %s back to %d", fsName, activeMDSCount)
-	// TODO: Unknown (Aug 2021) if this can be removed once Rook no longer supports Octopus.
-	// upgrade guide according to octopus https://docs.ceph.com/en/octopus/cephfs/upgrading/
+	// upgrade guide for mds: https://docs.ceph.com/en/latest/cephfs/upgrading/
 	if err := cephclient.SetNumMDSRanks(context, clusterInfo, fsName, activeMDSCount); err != nil {
 		return errors.Wrapf(err, "Failed to restore filesystem %s following daemon upgrade", fsName)
 	}

@@ -18,13 +18,13 @@ package operator
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path"
 
 	cs "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1"
 	"github.com/pkg/errors"
 	"github.com/rook/rook/pkg/clusterd"
+	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +36,6 @@ import (
 const (
 	admissionControllerAppName       = "rook-ceph-admission-controller"
 	tlsPort                    int32 = 443
-	webhookEnv                       = "ROOK_DISABLE_ADMISSION_CONTROLLER"
 )
 
 var (
@@ -51,11 +50,15 @@ func createWebhook(ctx context.Context, context *clusterd.Context) (bool, error)
 		return false, nil
 	}
 
-	if os.Getenv(webhookEnv) == "true" {
-		logger.Info("delete Issuer and Certificate since secret is not found")
-		if err = deleteIssuerAndCetificate(ctx, certMgrClient, context); err != nil {
-			logger.Errorf("failed to delete issuer or certificate. %v", err)
-		}
+	value, err := k8sutil.GetOperatorSetting(ctx, context.Clientset, opcontroller.OperatorSettingConfigMapName, "ROOK_DISABLE_ADMISSION_CONTROLLER", "true")
+	if err != nil {
+		return false, err
+	}
+
+	if value == "true" {
+		logger.Info("delete webhook resources since webhook is disabled")
+
+		deleteWebhookResources(ctx, certMgrClient, context)
 		return false, nil
 	}
 
@@ -84,9 +87,8 @@ func createWebhook(ctx context.Context, context *clusterd.Context) (bool, error)
 		if apierrors.IsNotFound(err) {
 			// If secret is not found. All good ! Proceed with rook without admission controllers
 			logger.Info("delete Issuer and Certificate since secret is not found")
-			if err = deleteIssuerAndCetificate(ctx, certMgrClient, context); err != nil {
-				logger.Infof("could not delete issuer or certificate. %v", err)
-			}
+			deleteWebhookResources(ctx, certMgrClient, context)
+
 			logger.Infof("admission webhook secret %q not found. proceeding without the admission controller", admissionControllerAppName)
 			return false, nil
 		}
@@ -105,7 +107,7 @@ func createWebhook(ctx context.Context, context *clusterd.Context) (bool, error)
 		filePath := path.Join(certDir, k)
 		// We must use 0600 mode so that the files can be overridden each time the Secret is fetched
 		// to keep an updated content
-		err := ioutil.WriteFile(filePath, data, 0600)
+		err := os.WriteFile(filePath, data, 0600)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to write secret content to file %q", filePath)
 		}

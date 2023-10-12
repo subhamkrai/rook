@@ -18,21 +18,21 @@ limitations under the License.
 package k8sutil
 
 import (
-	"path"
 	"testing"
 
-	"github.com/rook/rook/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetServiceMonitor(t *testing.T) {
-	projectRoot := util.PathToProjectRoot()
-	filePath := path.Join(projectRoot, "/deploy/examples/monitoring/service-monitor.yaml")
-	servicemonitor, err := GetServiceMonitor(filePath)
-	assert.Nil(t, err)
-	assert.Equal(t, "rook-ceph-mgr", servicemonitor.GetName())
-	assert.Equal(t, "rook-ceph", servicemonitor.GetNamespace())
+	name := "rook-ceph-mgr"
+	namespace := "rook-ceph"
+	port := "http-metrics"
+	servicemonitor := GetServiceMonitor(name, namespace, port)
+	assert.Equal(t, name, servicemonitor.GetName())
+	assert.Equal(t, namespace, servicemonitor.GetNamespace())
+	assert.Equal(t, port, servicemonitor.Spec.Endpoints[0].Port)
 	assert.NotNil(t, servicemonitor.GetLabels())
 	assert.NotNil(t, servicemonitor.Spec.NamespaceSelector.MatchNames)
+	assert.NotNil(t, servicemonitor.Spec.Selector.MatchLabels)
 	assert.NotNil(t, servicemonitor.Spec.Endpoints)
 }

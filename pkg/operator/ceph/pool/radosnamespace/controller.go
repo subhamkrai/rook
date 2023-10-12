@@ -97,7 +97,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephBlockPoolRadosNamespace CRD object
-	err = c.Watch(&source.Kind{Type: &cephv1.CephBlockPoolRadosNamespace{TypeMeta: controllerTypeMeta}}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
+	err = c.Watch(source.Kind(mgr.GetCache(), &cephv1.CephBlockPoolRadosNamespace{TypeMeta: controllerTypeMeta}), &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (r *ReconcileCephBlockPoolRadosNamespace) reconcile(request reconcile.Reque
 	}
 
 	// Populate clusterInfo during each reconcile
-	r.clusterInfo, _, _, err = opcontroller.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace)
+	r.clusterInfo, _, _, err = opcontroller.LoadClusterInfo(r.context, r.opManagerContext, request.NamespacedName.Namespace, &cephCluster.Spec)
 	if err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "failed to populate cluster info")
 	}
@@ -249,7 +249,7 @@ func (r *ReconcileCephBlockPoolRadosNamespace) reconcile(request reconcile.Reque
 
 	r.updateStatus(r.client, namespacedName, cephv1.ConditionReady)
 	// Return and do not requeue
-	logger.Debug("done reconciling cephBlockPoolRadosNamespace %q", namespacedName)
+	logger.Debugf("done reconciling cephBlockPoolRadosNamespace %q", namespacedName)
 	return reconcile.Result{}, nil
 }
 
@@ -259,7 +259,7 @@ func (r *ReconcileCephBlockPoolRadosNamespace) updateClusterConfig(cephBlockPool
 	// config map, so no special care is needed in this controller
 	csiClusterConfigEntry := csi.CsiClusterConfigEntry{
 		Namespace: r.clusterInfo.Namespace,
-		Monitors:  csi.MonEndpoints(r.clusterInfo.Monitors),
+		Monitors:  csi.MonEndpoints(r.clusterInfo.Monitors, cephCluster.Spec.RequireMsgr2()),
 		RBD: &csi.CsiRBDSpec{
 			RadosNamespace: cephBlockPoolRadosNamespace.Name,
 		},
@@ -268,7 +268,7 @@ func (r *ReconcileCephBlockPoolRadosNamespace) updateClusterConfig(cephBlockPool
 
 	if cephCluster.Spec.Network.IsMultus() {
 		// Build the network namespace config to be injected into the csi config
-		netNamespaceFilePath, err := csi.GenerateNetNamespaceFilePath(r.opManagerContext, r.client, cephCluster.ClusterName, r.opConfig.OperatorNamespace, csi.RBDDriverShortName)
+		netNamespaceFilePath, err := csi.GenerateNetNamespaceFilePath(r.opManagerContext, r.client, cephCluster.Name, r.opConfig.OperatorNamespace, csi.RBDDriverShortName)
 		if err != nil {
 			return errors.Wrap(err, "failed to generate rbd net namespace file path")
 		}

@@ -10,11 +10,14 @@
         "block",
         "bot",
         "build",
-        "cephfs-mirror",
+        "cephfsmirror",
         "ci",
         "core",
+        "cosi",
         "csi",
+        "doc",
         "docs",
+        "exporter",
         "external",
         "file",
         "helm",
@@ -23,17 +26,19 @@
         "mgr",
         "mon",
         "monitoring",
+        "multus",
         "nfs",
         "object",
         "operator",
         "osd",
         "pool",
-        "rbd-mirror",
+        "rbdmirror",
         "rgw",
         "security",
         "subvolumegroup",
         "namespace",
         "test",
+        "tests",
         "webhook"
       ]
     ],
@@ -43,6 +48,10 @@
     ],
     "footer-leading-blank": [
       2,
+      "always"
+    ],
+    "body-max-line-length": [
+      0,
       "always"
     ]
   }

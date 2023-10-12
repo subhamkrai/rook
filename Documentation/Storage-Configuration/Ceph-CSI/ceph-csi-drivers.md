@@ -10,9 +10,9 @@ There are three CSI drivers integrated with Rook that will enable different scen
   [More information](../Shared-Filesystem-CephFS/filesystem-storage.md).
 * NFS (experimental): This file storage driver allows creating NFS exports that can be mounted to
   pods, or the exports can be mounted directly via an NFS client from inside or outside the
-  Kubernetes cluster. [More information](../../CRDs/ceph-nfs-crd.md#ceph-csi-nfs-provisioner-and-nfs-csi-driver).
+  Kubernetes cluster. [More information](../NFS/nfs-csi-driver.md)
 
-The Ceph Filesysetem (CephFS) and RADOS Block Device (RBD) drivers are enabled automatically with
+The Ceph Filesystem (CephFS) and RADOS Block Device (RBD) drivers are enabled automatically with
 the Rook operator. The NFS driver is disabled by default. All drivers will be started in the same
 namespace as the operator when the first CephCluster CR is created.
 
@@ -71,26 +71,17 @@ PVC will be updated to new size.
 
 ## RBD Mirroring
 
-To support RBD Mirroring, the [Volume Replication Operator](https://github.com/csi-addons/volume-replication-operator/blob/main/README.md) will be started in the RBD provisioner pod.
-The Volume Replication Operator is a kubernetes operator that provides common and reusable APIs for storage disaster recovery. It is based on [csi-addons/spec](https://github.com/csi-addons/spec) specification and can be used by any storage provider.
+To support RBD Mirroring, the [CSI-Addons sidecar](https://github.com/csi-addons/kubernetes-csi-addons#readme) will be started in the RBD provisioner pod.
+The CSI-Addons supports the VolumeReplication operation. The volume replication controller provides common and reusable APIs for storage disaster recovery. It is based on [csi-addons/spec](https://github.com/csi-addons/spec) specification and can be used by any storage provider.
 It follows the controller pattern and provides extended APIs for storage disaster recovery. The extended APIs are provided via Custom Resource Definitions (CRDs).
 
 ### Prerequisites
 
 Kubernetes version 1.21 or greater is required.
 
-### Enable volume replication
+### Enable CSIAddons Sidecar
 
-1. Install the volume replication CRDs:
-
-    ```console
-    kubectl create -f https://raw.githubusercontent.com/csi-addons/volume-replication-operator/v0.3.0/config/crd/bases/replication.storage.openshift.io_volumereplications.yaml
-    kubectl create -f https://raw.githubusercontent.com/csi-addons/volume-replication-operator/v0.3.0/config/crd/bases/replication.storage.openshift.io_volumereplicationclasses.yaml
-    ```
-
-2. Enable the volume replication controller:
-    * For Helm deployments see the [`csi.volumeReplication.enabled` setting](../../Helm-Charts/operator-chart.md#configuration).
-    * For non-Helm deployments set `CSI_ENABLE_VOLUME_REPLICATION: "true"` in operator.yaml
+To enable the CSIAddons sidecar and deploy the controller, Please follow the steps [below](#csi-addons-controller)
 
 ## Ephemeral volume support
 
@@ -132,9 +123,9 @@ The CSI-Addons Controller handles the requests from users to initiate an operati
 Users can deploy the controller by running the following commands:
 
 ```console
-kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.4.0/deploy/controller/crds.yaml
-kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.4.0/deploy/controller/rbac.yaml
-kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.4.0/deploy/controller/setup-controller.yaml
+kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.7.0/deploy/controller/crds.yaml
+kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.7.0/deploy/controller/rbac.yaml
+kubectl create -f https://raw.githubusercontent.com/csi-addons/kubernetes-csi-addons/v0.7.0/deploy/controller/setup-controller.yaml
 ```
 
 This creates the required crds and configure permissions.
@@ -166,11 +157,15 @@ kubectl patch cm rook-ceph-operator-config -nrook-ceph -p $'data:\n "CSI_ENABLE_
 CSI-Addons supports the following operations:
 
 * Reclaim Space
-  * [Creating a ReclaimSpaceJob](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.3.0/docs/reclaimspace.md#reclaimspacejob)
-  * [Creating a ReclaimSpaceCronJob](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.3.0/docs/reclaimspace.md#reclaimspacecronjob)
-  * [Annotating PersistentVolumeClaims](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.3.0/docs/reclaimspace.md#annotating-perstentvolumeclaims)
+  * [Creating a ReclaimSpaceJob](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/reclaimspace.md#reclaimspacejob)
+  * [Creating a ReclaimSpaceCronJob](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/reclaimspace.md#reclaimspacecronjob)
+  * [Annotating PersistentVolumeClaims](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/reclaimspace.md#annotating-perstentvolumeclaims)
+  * [Annotating Namespace](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/reclaimspace.md#annotating-namespace)
 * Network Fencing
-  * [Creating a NetworkFence](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.3.0/docs/networkfence.md)
+  * [Creating a NetworkFence](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/networkfence.md)
+* Volume Replication
+  * [Creating VolumeReplicationClass](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/volumereplicationclass.md)
+  * [Creating VolumeReplication CR](https://github.com/csi-addons/kubernetes-csi-addons/blob/v0.7.0/docs/volumereplication.md)
 
 ## Enable RBD Encryption Support
 
@@ -244,3 +239,33 @@ parameters:
 ```
 
 * PVCs created using the new storageclass will be encrypted.
+
+## Enable Read affinity for RBD volumes
+
+Ceph CSI supports mapping RBD volumes with krbd options to allow
+serving reads from an OSD in proximity to the client, according to
+OSD locations defined in the CRUSH map and topology labels on nodes.
+
+Refer to the [krbd-options](https://docs.ceph.com/en/latest/man/8/rbd/#kernel-rbd-krbd-options)
+for more details.
+
+Execute the following steps:
+
+* Patch the `rook-ceph-operator-config` configmap using the following
+command.
+```console
+kubectl patch cm rook-ceph-operator-config -nrook-ceph -p $'data:\n "CSI_ENABLE_READ_AFFINITY": "true"'
+```
+
+* Add topology labels to the Kubernetes nodes. The same labels may be used as mentioned in the
+[OSD topology](../../CRDs/Cluster/ceph-cluster-crd.md#osd-topology) topic.
+
+* (optional) Rook will pass the labels mentioned in [osd-topology](../../CRDs/Cluster/ceph-cluster-crd.md#osd-topology)
+as the default set of labels. This can overridden to supply custom labels by updating the
+`CSI_CRUSH_LOCATION_LABELS` value in the `rook-ceph-operator-config` configmap.
+
+Ceph CSI will extract the CRUSH location from the topology labels found on the node
+and pass it though krbd options during mapping RBD volumes.
+
+!!! note
+    This requires kernel version 5.8 or higher.

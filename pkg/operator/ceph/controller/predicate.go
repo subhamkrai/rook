@@ -48,7 +48,7 @@ const (
 )
 
 // WatchControllerPredicate is a special update filter for update events
-// do not reconcile if the the status changes, this avoids a reconcile storm loop
+// do not reconcile if the status changes, this avoids a reconcile storm loop
 //
 // returning 'true' means triggering a reconciliation
 // returning 'false' means do NOT trigger a reconciliation
@@ -522,8 +522,7 @@ func WatchPredicateForNonCRDObject(owner runtime.Object, scheme *runtime.Scheme)
 				}
 
 				// If the resource is a canary deployment we don't reconcile because it's ephemeral
-				isCanary := isCanary(e.Object)
-				if isCanary {
+				if isCanary(e.Object) || isCrashCollector(e.Object) {
 					return false
 				}
 
@@ -687,6 +686,25 @@ func isCanary(obj runtime.Object) bool {
 	labelVal, labelKeyExist := labels["mon_canary"]
 	if labelKeyExist && labelVal == "true" {
 		logger.Debugf("do not reconcile %q on monitor canary deployments", d.Name)
+		return true
+	}
+
+	return false
+}
+
+func isCrashCollector(obj runtime.Object) bool {
+	// If not a deployment, let's not reconcile
+	d, ok := obj.(*appsv1.Deployment)
+	if !ok {
+		return false
+	}
+
+	// Get the labels
+	labels := d.GetLabels()
+
+	labelVal, labelKeyExist := labels["app"]
+	if labelKeyExist && labelVal == "rook-ceph-crashcollector" {
+		logger.Debugf("do not reconcile %q on crash collectors", d.Name)
 		return true
 	}
 

@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // compile-time assertions ensures CephObjectStore implements webhook.Validator so a webhook builder
@@ -28,12 +29,21 @@ var _ webhook.Validator = &CephObjectStore{}
 
 const ServiceServingCertKey = "service.beta.openshift.io/serving-cert-secret-name"
 
+// 38 is the max length of a ceph store name as total length of the resource name cannot be more than 63 characters limit
+// and there is a configmap which is formed by appending `rook-ceph-rgw-<STORE-NAME>-mime-types`
+// so over all it brings up to (63-14-11 = 38) characters for the store name
+const objectStoreNameMaxLen = 38
+
 func (s *ObjectStoreSpec) IsMultisite() bool {
 	return s.Zone.Name != ""
 }
 
 func (s *ObjectStoreSpec) IsTLSEnabled() bool {
 	return s.Gateway.SecurePort != 0 && (s.Gateway.SSLCertificateRef != "" || s.GetServiceServingCert() != "")
+}
+
+func (s *ObjectStoreSpec) IsRGWDashboardEnabled() bool {
+	return s.Gateway.DashboardEnabled == nil || *s.Gateway.DashboardEnabled
 }
 
 func (s *ObjectStoreSpec) GetPort() (int32, error) {
@@ -49,16 +59,23 @@ func (s *ObjectStoreSpec) IsExternal() bool {
 	return len(s.Gateway.ExternalRgwEndpoints) != 0
 }
 
+func (s *ObjectStoreSpec) IsHostNetwork(c *ClusterSpec) bool {
+	if s.Gateway.HostNetwork != nil {
+		return *s.Gateway.HostNetwork
+	}
+	return c.Network.IsHost()
+}
+
 func (s *ObjectRealmSpec) IsPullRealm() bool {
 	return s.Pull.Endpoint != ""
 }
 
-func (o *CephObjectStore) ValidateCreate() error {
+func (o *CephObjectStore) ValidateCreate() (admission.Warnings, error) {
 	logger.Infof("validate create cephobjectstore %v", o)
 	if err := ValidateObjectSpec(o); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateObjectSpec validate the object store arguments
@@ -68,6 +85,16 @@ func ValidateObjectSpec(gs *CephObjectStore) error {
 	}
 	if gs.Namespace == "" {
 		return errors.New("missing namespace")
+	}
+
+	// validate the object store name only if it is not an external cluster
+	// as external cluster won't create the rgw daemon and it's other resources
+	// and there is some legacy external cluster which has more length of objectstore
+	// so to run them successfully we are not validating the objectstore name
+	if !gs.Spec.IsExternal() {
+		if len(gs.Name) > objectStoreNameMaxLen {
+			return errors.New("object store name cannot be longer than 38 characters")
+		}
 	}
 	securePort := gs.Spec.Gateway.SecurePort
 	if securePort < 0 || securePort > 65535 {
@@ -79,17 +106,17 @@ func ValidateObjectSpec(gs *CephObjectStore) error {
 	return nil
 }
 
-func (o *CephObjectStore) ValidateUpdate(old runtime.Object) error {
+func (o *CephObjectStore) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	logger.Info("validate update cephobjectstore")
 	err := ValidateObjectSpec(o)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
-func (o *CephObjectStore) ValidateDelete() error {
-	return nil
+func (o *CephObjectStore) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (s *ObjectStoreSpec) GetServiceServingCert() string {
@@ -101,4 +128,17 @@ func (s *ObjectStoreSpec) GetServiceServingCert() string {
 
 func (c *CephObjectStore) GetStatusConditions() *[]Condition {
 	return &c.Status.Conditions
+}
+
+func (z *CephObjectZone) GetStatusConditions() *[]Condition {
+	return &z.Status.Conditions
+}
+
+// String returns an addressable string representation of the EndpointAddress.
+func (e *EndpointAddress) String() string {
+	// hostname is easier to read, and it is probably less likely to change, so prefer it over IP
+	if e.Hostname != "" {
+		return e.Hostname
+	}
+	return e.IP
 }
