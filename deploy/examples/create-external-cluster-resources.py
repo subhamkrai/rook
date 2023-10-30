@@ -775,7 +775,10 @@ class RadosJSON:
                 json_out.get("mgrmap", {}).get("services", {}).get("prometheus", "")
             )
             if not monitoring_endpoint:
-                return "", ""
+                raise ExecutionFailureException(
+                    "can't find monitoring_endpoint, prometheus module might not be enabled, "
+                    "enable the module by running 'ceph mgr module enable prometheus'"
+                )
             # now check the stand-by mgr-s
             standby_arr = json_out.get("mgrmap", {}).get("standbys", [])
             for each_standby in standby_arr:
@@ -1299,6 +1302,14 @@ class RadosJSON:
                 f"The provided pool, '{self._arg_parser.rbd_data_pool_name}', does not exist"
             )
 
+    def init_rbd_pool(self):
+        if isinstance(self.cluster, DummyRados):
+            return
+        rbd_pool_name = self._arg_parser.rbd_data_pool_name
+        ioctx = self.cluster.open_ioctx(rbd_pool_name)
+        rbd_inst = rbd.RBD()
+        rbd_inst.pool_init(ioctx, True)
+
     def validate_rados_namespace(self):
         rbd_pool_name = self._arg_parser.rbd_data_pool_name
         rados_namespace = self._arg_parser.rados_namespace
@@ -1467,6 +1478,7 @@ class RadosJSON:
             self._arg_parser.k8s_cluster_name.lower()
         )  # always convert cluster name to lowercase characters
         self.validate_rbd_pool()
+        self.init_rbd_pool()
         self.validate_rados_namespace()
         self._excluded_keys.add("K8S_CLUSTER_NAME")
         self.get_cephfs_data_pool_details()
