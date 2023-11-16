@@ -6135,8 +6135,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>The Ceph pool used store the shared configuration for NFS-Ganesha daemons.
-This setting is required for Ceph v15 and ignored for Ceph v16.
-As of Ceph Pacific 16.2.7+, this is internally hardcoded to &ldquo;.nfs&rdquo;.</p>
+This setting is deprecated, as it is internally required to be &ldquo;.nfs&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -6149,8 +6148,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>The namespace inside the Ceph pool (set by &lsquo;pool&rsquo;) where shared NFS-Ganesha config is stored.
-This setting is required for Ceph v15 and ignored for Ceph v16.
-As of Ceph Pacific v16+, this is internally set to the name of the CephNFS.</p>
+This setting is deprecated as it is internally set to the name of the CephNFS.</p>
 </td>
 </tr>
 </tbody>
@@ -6272,6 +6270,21 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Whether host networking is enabled for the Ganesha server. If not set, the network settings from the cluster CR will be applied.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>livenessProbe</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ProbeSpec">
+ProbeSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>A liveness-probe to verify that Ganesha server has valid run-time state.
+If LivenessProbe.Disabled is false and LivenessProbe.Probe is nil uses default probe.</p>
 </td>
 </tr>
 </tbody>
@@ -10014,7 +10027,7 @@ QuotaSpec
 <h3 id="ceph.rook.io/v1.ProbeSpec">ProbeSpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.MetadataServerSpec">MetadataServerSpec</a>, <a href="#ceph.rook.io/v1.ObjectHealthCheckSpec">ObjectHealthCheckSpec</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.GaneshaServerSpec">GaneshaServerSpec</a>, <a href="#ceph.rook.io/v1.MetadataServerSpec">MetadataServerSpec</a>, <a href="#ceph.rook.io/v1.ObjectHealthCheckSpec">ObjectHealthCheckSpec</a>)
 </p>
 <div>
 <p>ProbeSpec is a wrapper around Probe so it can be enabled or disabled for a Ceph daemon</p>

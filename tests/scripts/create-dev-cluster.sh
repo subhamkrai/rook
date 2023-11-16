@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 
-# Copyright 2021 The Rook Authors. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-KUBECTL="minikube kubectl --"
-ROOK_EXAMPLES_DIR="../../deploy/examples/"
+SCRIPT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+ROOK_EXAMPLES_DIR="${SCRIPT_ROOT}/../../deploy/examples/"
+
+init_vars(){
+    local rook_profile_name=$1
+    ROOK_PROFILE_NAME=$rook_profile_name
+    MINIKUBE="minikube --profile $rook_profile_name"
+    KUBECTL="$MINIKUBE kubectl --"
+}
 
 wait_for_ceph_cluster() {
     echo "Waiting for ceph cluster"
@@ -47,7 +41,8 @@ get_minikube_driver() {
     fi
 }
 
-show_ceph_dashboard_info() {
+show_info() {
+    local monitoring_enabled=$1
     DASHBOARD_PASSWORD=$($KUBECTL -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo)
     IP_ADDR=$($KUBECTL get po --selector="app=rook-ceph-mgr" -n rook-ceph --output jsonpath='{.items[*].status.hostIP}')
     PORT="$($KUBECTL -n rook-ceph -o=jsonpath='{.spec.ports[?(@.name == "dashboard")].nodePort}' get services rook-ceph-mgr-dashboard-external-http)"
@@ -56,25 +51,38 @@ show_ceph_dashboard_info() {
     echo "Ceph Dashboard: "
     echo "   IP_ADDRESS: $BASE_URL"
     echo "   PASSWORD: $DASHBOARD_PASSWORD"
+    if [ "$monitoring_enabled" = true ]; then
+	PROMETHEUS_API_HOST="http://$(kubectl -n rook-ceph -o jsonpath='{.status.hostIP}' get pod prometheus-rook-prometheus-0):30900"
+    echo "Prometheus Dashboard: "
+    echo "   API_HOST: $PROMETHEUS_API_HOST"
+    fi
     echo "==========================="
+    echo " "
+    echo " *** To start using your rook cluster please set the following env: "
+    echo " "
+    echo "   > eval \$($MINIKUBE docker-env)"
+    echo "   > alias kubectl=\"$KUBECTL"\"
+    echo " "
+    echo " *** To access the new cluster with k9s: "
+    echo " "
+    echo "   > k9s --context $ROOK_PROFILE_NAME"
+    echo " "
 }
 
 check_minikube_exists() {
-    minikube profile list > /dev/null 2>&1
-    local retcode=$?
-
-    if [ $retcode -eq 0 ]; then
-        echo "A minikube environment already exists, please use -f to force the cluster creation."
+    echo "Checking minikube profile '$ROOK_PROFILE_NAME'..."
+    if minikube profile list -l 2> /dev/null | grep -qE "\s$ROOK_PROFILE_NAME\s"; then
+        echo "A minikube profile '$ROOK_PROFILE_NAME' already exists, please use -f to force the cluster creation."
 	exit 1
     fi
 }
 
 setup_minikube_env() {
     minikube_driver="$(get_minikube_driver)"
-    echo "Setting up minikube env (using $minikube_driver driver)"
-    minikube delete
-    minikube start --disk-size=40g --extra-disks=3 --driver "$minikube_driver"
-    eval "$(minikube docker-env -p minikube)"
+    echo "Setting up minikube env for profile '$ROOK_PROFILE_NAME' (using $minikube_driver driver)"
+    $MINIKUBE delete
+    $MINIKUBE start --disk-size=40g --extra-disks=3 --driver "$minikube_driver"
+    eval "$($MINIKUBE docker-env)"
 }
 
 create_rook_cluster() {
@@ -104,22 +112,44 @@ wait_for_rook_operator() {
 enable_rook_orchestrator() {
     echo "Enabling rook orchestrator"
     $KUBECTL rollout status deployment rook-ceph-tools -n rook-ceph --timeout=30s
-    kubectl -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph mgr module enable rook
-    kubectl -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph orch set backend rook
-    kubectl -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph orch status
+    $KUBECTL -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph mgr module enable rook
+    $KUBECTL -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph orch set backend rook
+    $KUBECTL -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph orch status
+}
+
+enable_monitoring() {
+    echo "Enabling monitoring"
+    $KUBECTL apply -f https://raw.githubusercontent.com/coreos/prometheus-operator/v0.40.0/bundle.yaml
+    $KUBECTL wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus-operator --timeout=30s
+    $KUBECTL apply -f monitoring/service-monitor.yaml
+    $KUBECTL apply -f monitoring/exporter-service-monitor.yaml
+    $KUBECTL apply -f monitoring/prometheus.yaml
+    $KUBECTL apply -f monitoring/prometheus-service.yaml
+    PROMETHEUS_API_HOST="http://$(kubectl -n rook-ceph -o jsonpath='{.status.hostIP}' get pod prometheus-rook-prometheus-0):30900"
+    $KUBECTL -n rook-ceph exec -it deploy/rook-ceph-tools -- ceph dashboard set-prometheus-api-host "$PROMETHEUS_API_HOST"
 }
 
 show_usage() {
     echo ""
-    echo " Usage: $(basename "$0") [-r] [-d /path/to/rook-examples/dir]"
-    echo "  -r        Enable rook orchestrator"
-    echo "  -d value  Path to Rook examples directory (i.e github.com/rook/rook/deploy/examples)"
+    echo " Usage: $(basename "$0") [-r] [-m] [-p <profile-name>] [-d /path/to/rook-examples/dir]"
+    echo "  -r                Enable rook orchestrator"
+    echo "  -m                Enable monitoring"
+    echo "  -p <profile-name> Specify the minikube profile name"
+    echo "  -d value          Path to Rook examples directory (i.e github.com/rook/rook/deploy/examples)"
+}
+
+invocation_error() {
+    printf "%s\n" "$*" > /dev/stderr
+    show_usage
+    exit 1
 }
 
 ####################################################################
 ################# MAIN #############################################
 
-while getopts ":hrfd:" opt; do
+
+
+while getopts ":hrmfd:p:" opt; do
     case $opt in
 	h)
 	    show_usage
@@ -128,20 +158,23 @@ while getopts ":hrfd:" opt; do
 	r)
 	    enable_rook=true
 	    ;;
+	m)
+	    enable_monitoring=true
+	    ;;
 	f)
 	    force_minikube=true
 	    ;;
 	d)
 	    ROOK_EXAMPLES_DIR="$OPTARG"
 	    ;;
+	p)
+	    minikube_profile_name="$OPTARG"
+	    ;;
 	\?)
-	    echo  "Invalid option: -$OPTARG" >&2
-	    show_usage
-	    exit 1
+	    invocation_error "Invalid option: -$OPTARG"
 	    ;;
 	:)
-	    echo "Option -$OPTARG requires an argument." >&2
-	    exit 1
+	    invocation_error "Option -$OPTARG requires an argument."
 	    ;;
     esac
 done
@@ -150,6 +183,7 @@ echo "Using '$ROOK_EXAMPLES_DIR' as examples directory.."
 
 cd "$ROOK_EXAMPLES_DIR" || exit
 check_examples_dir
+init_vars "${minikube_profile_name:-rook}"
 
 if [ -z "$force_minikube" ]; then
     check_minikube_exists
@@ -164,7 +198,11 @@ if [ "$enable_rook" = true ]; then
     enable_rook_orchestrator
 fi
 
-show_ceph_dashboard_info
+if [ "$enable_monitoring" = true ]; then
+    enable_monitoring
+fi
+
+show_info "$enable_monitoring"
 
 ####################################################################
 ####################################################################

@@ -2065,14 +2065,12 @@ type NFSGaneshaSpec struct {
 // GaneshaRADOSSpec represents the specification of a Ganesha RADOS object
 type GaneshaRADOSSpec struct {
 	// The Ceph pool used store the shared configuration for NFS-Ganesha daemons.
-	// This setting is required for Ceph v15 and ignored for Ceph v16.
-	// As of Ceph Pacific 16.2.7+, this is internally hardcoded to ".nfs".
+	// This setting is deprecated, as it is internally required to be ".nfs".
 	// +optional
 	Pool string `json:"pool,omitempty"`
 
 	// The namespace inside the Ceph pool (set by 'pool') where shared NFS-Ganesha config is stored.
-	// This setting is required for Ceph v15 and ignored for Ceph v16.
-	// As of Ceph Pacific v16+, this is internally set to the name of the CephNFS.
+	// This setting is deprecated as it is internally set to the name of the CephNFS.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }
@@ -2118,6 +2116,11 @@ type GaneshaServerSpec struct {
 	// +nullable
 	// +optional
 	HostNetwork *bool `json:"hostNetwork,omitempty"`
+
+	// A liveness-probe to verify that Ganesha server has valid run-time state.
+	// If LivenessProbe.Disabled is false and LivenessProbe.Probe is nil uses default probe.
+	// +optional
+	LivenessProbe *ProbeSpec `json:"livenessProbe,omitempty"`
 }
 
 // NFSSecuritySpec represents security configurations for an NFS server pod

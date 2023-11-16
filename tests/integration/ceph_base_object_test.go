@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -112,7 +114,7 @@ func createCephObjectStore(t *testing.T, helper *clients.TestClient, k8sh *utils
 
 	// Check object store status
 	t.Run("verify object store status", func(t *testing.T) {
-		retryCount := 30
+		retryCount := 40
 		i := 0
 		for i = 0; i < retryCount; i++ {
 			objectStore, err := k8sh.RookClientset.CephV1().CephObjectStores(namespace).Get(ctx, storeName, metav1.GetOptions{})
@@ -192,6 +194,12 @@ func assertObjectStoreDeletion(t *testing.T, k8sh *utils.K8sHelper, namespace, s
 	sleepTime := 3 * time.Second
 	for i = 0; i < retry; i++ {
 		storeStr, err := k8sh.GetResource("-n", namespace, "CephObjectStore", storeName, "-o", "json")
+		// if cephobjectstore is not found, just return the test
+		// no need to check deletion phases as it is already deleted
+		if err != nil && strings.Contains(storeStr, errors.NewNotFound(v1.Resource("cephobjectstores.ceph.rook.io"), storeName).ErrStatus.Message) {
+			return
+		}
+
 		assert.NoError(t, err)
 		logger.Infof("store: \n%s", storeStr)
 
