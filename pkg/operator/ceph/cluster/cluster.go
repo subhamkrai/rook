@@ -489,6 +489,12 @@ func (c *cluster) postMonStartupActions() error {
 		return errors.Wrap(err, "failed to create crash collector kubernetes secret")
 	}
 
+	// Create exporter Kubernetes Secret
+	err = nodedaemon.CreateExporterSecret(c.context, c.ClusterInfo)
+	if err != nil {
+		return errors.Wrap(err, "failed to create exporter kubernetes secret")
+	}
+
 	// Always ensure the skip mds sanity checks setting is cleared, for all Pacific deployments
 	if c.ClusterInfo.CephVersion.IsPacific() {
 		if err := c.skipMDSSanityChecks(false); err != nil {
