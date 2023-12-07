@@ -21,6 +21,7 @@
         "external",
         "file",
         "helm",
+	"k8sutil",
         "manifest",
         "mds",
         "mgr",
@@ -38,8 +39,7 @@
         "subvolumegroup",
         "namespace",
         "test",
-        "tests",
-        "webhook"
+        "tests"
       ]
     ],
     "body-leading-blank": [

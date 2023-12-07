@@ -46,6 +46,12 @@ those releases.
     official releases. Builds from the master branch can have functionality changed or removed at any
     time without compatibility support and without prior notice.
 
+## Breaking changes in v1.13
+
+* The minimum supported version of Kubernetes is v1.23.
+* Support for the admission controller/webhooks has been removed. If admission controller/webhooks is enabled, disable by changing
+`ROOK_DISABLE_ADMISSION_CONTROLLER: "true"` in operator.yaml before upgrading to rook v1.13. CRD validation is now enabled with [Common Expression Language](https://kubernetes.io/docs/reference/using-api/cel/). This requires Kubernetes version 1.25 or higher.
+
 ## Breaking changes in v1.12
 
 * The minimum supported version of Kubernetes is v1.22.
@@ -144,7 +150,7 @@ by the Operator. Also update the Custom Resource Definitions (CRDs).
 Get the latest common resources manifests that contain the latest changes.
 
 ```console
-git clone --single-branch --depth=1 --branch master https://github.com/rook/rook.git
+git clone --single-branch --depth=1 --branch v1.13.0-beta.0 https://github.com/rook/rook.git
 cd rook/deploy/examples
 ```
 
@@ -183,7 +189,7 @@ The largest portion of the upgrade is triggered when the operator's image is upd
 When the operator is updated, it will proceed to update all of the Ceph daemons.
 
 ```console
-kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:master
+kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:v1.13.0-beta.0
 ```
 
 ### **3. Update Ceph CSI**

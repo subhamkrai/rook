@@ -190,12 +190,12 @@ data:
   # The default version of CSI supported by Rook will be started. To change the version
   # of the CSI driver to something other than what is officially supported, change
   # these images to the desired release of the CSI driver.
-  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.9.0"
-  # ROOK_CSI_REGISTRAR_IMAGE: "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.8.0"
-  # ROOK_CSI_RESIZER_IMAGE: "registry.k8s.io/sig-storage/csi-resizer:v1.8.0"
-  # ROOK_CSI_PROVISIONER_IMAGE: "registry.k8s.io/sig-storage/csi-provisioner:v3.5.0"
-  # ROOK_CSI_SNAPSHOTTER_IMAGE: "registry.k8s.io/sig-storage/csi-snapshotter:v6.2.2"
-  # ROOK_CSI_ATTACHER_IMAGE: "registry.k8s.io/sig-storage/csi-attacher:v4.3.0"
+  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.10.0"
+  # ROOK_CSI_REGISTRAR_IMAGE: "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.9.1"
+  # ROOK_CSI_RESIZER_IMAGE: "registry.k8s.io/sig-storage/csi-resizer:v1.9.2"
+  # ROOK_CSI_PROVISIONER_IMAGE: "registry.k8s.io/sig-storage/csi-provisioner:v3.6.2"
+  # ROOK_CSI_SNAPSHOTTER_IMAGE: "registry.k8s.io/sig-storage/csi-snapshotter:v6.3.2"
+  # ROOK_CSI_ATTACHER_IMAGE: "registry.k8s.io/sig-storage/csi-attacher:v4.4.2"
 
   # (Optional) set user created priorityclassName for csi plugin pods.
   CSI_PLUGIN_PRIORITY_CLASSNAME: "system-node-critical"
@@ -560,8 +560,6 @@ data:
   # Set to "ms_mode=secure" when connections.encrypted is enabled in CephCluster CR
   # CSI_CEPHFS_KERNEL_MOUNT_OPTIONS: "ms_mode=secure"
 
-  ROOK_DISABLE_ADMISSION_CONTROLLER: "true"
-
   # Whether the OBC provisioner should watch on the operator namespace or not, if not the namespace of the cluster will be used
   ROOK_OBC_WATCH_OPERATOR_NAMESPACE: "true"
 
@@ -666,10 +664,15 @@ spec:
       labels:
         app: rook-ceph-operator
     spec:
+      tolerations:
+        - effect: NoExecute
+          key: node.kubernetes.io/unreachable
+          operator: Exists
+          tolerationSeconds: 5
       serviceAccountName: rook-ceph-system
       containers:
         - name: rook-ceph-operator
-          image: rook/ceph:master
+          image: rook/ceph:v1.13.0-beta.0
           args: ["ceph", "operator"]
           securityContext:
             runAsNonRoot: true
@@ -680,12 +683,6 @@ spec:
               name: rook-config
             - mountPath: /etc/ceph
               name: default-config-dir
-            - mountPath: /etc/webhook
-              name: webhook-cert
-          ports:
-            - containerPort: 9443
-              name: https-webhook
-              protocol: TCP
           env:
             - name: ROOK_CURRENT_NAMESPACE_ONLY
               value: "false"
@@ -764,7 +761,5 @@ spec:
         - name: rook-config
           emptyDir: {}
         - name: default-config-dir
-          emptyDir: {}
-        - name: webhook-cert
           emptyDir: {}
 # OLM: END OPERATOR DEPLOYMENT

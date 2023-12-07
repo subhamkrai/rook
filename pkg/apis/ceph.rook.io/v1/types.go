@@ -142,6 +142,7 @@ type ClusterSpec struct {
 
 	// The path on the host where config and data can be persisted
 	// +kubebuilder:validation:Pattern=`^/(\S+)`
+	// +kubebuilder:validation:XValidation:message="DataDirHostPath is immutable",rule="self == oldSelf"
 	// +optional
 	DataDirHostPath string `json:"dataDirHostPath,omitempty"`
 
@@ -221,6 +222,47 @@ type ClusterSpec struct {
 	// +optional
 	// +nullable
 	LogCollector LogCollectorSpec `json:"logCollector,omitempty"`
+
+	// CSI Driver Options applied per cluster.
+	// +optional
+	CSI CSIDriverSpec `json:"csi,omitempty"`
+
+	// Ceph Config options
+	// +optional
+	// +nullable
+	CephConfig map[string]map[string]string `json:"cephConfig,omitempty"`
+}
+
+// CSIDriverSpec defines CSI Driver settings applied per cluster.
+type CSIDriverSpec struct {
+	// ReadAffinity defines the read affinity settings for CSI driver.
+	// +optional
+	ReadAffinity ReadAffinitySpec `json:"readAffinity"`
+	// CephFS defines CSI Driver settings for CephFS driver.
+	// +optional
+	CephFS CSICephFSSpec `json:"cephfs,omitempty"`
+}
+
+// CSICephFSSpec defines the settings for CephFS CSI driver.
+type CSICephFSSpec struct {
+	// KernelMountOptions defines the mount options for kernel mounter.
+	// +optional
+	KernelMountOptions string `json:"kernelMountOptions,omitempty"`
+	// FuseMountOptions defines the mount options for ceph fuse mounter.
+	// +optional
+	FuseMountOptions string `json:"fuseMountOptions,omitempty"`
+}
+
+// ReadAffinitySpec defines the read affinity settings for CSI driver.
+type ReadAffinitySpec struct {
+	// Enables read affinity for CSI driver.
+	// +optional
+	Enabled bool `json:"enabled"`
+	// CrushLocationLabels defines which node labels to use
+	// as CRUSH location. This should correspond to the values set in
+	// the CRUSH map.
+	// +optional
+	CrushLocationLabels []string `json:"crushLocationLabels,omitempty"`
 }
 
 // LogCollectorSpec is the logging spec
@@ -534,6 +576,8 @@ const (
 )
 
 // MonSpec represents the specification of the monitor
+// +kubebuilder:validation:XValidation:message="zones must be less than or equal to count",rule="!has(self.zones) || (has(self.zones) && (size(self.zones) <= self.count))"
+// +kubebuilder:validation:XValidation:message="stretchCluster zones must be equal to 3",rule="!has(self.stretchCluster) || (has(self.stretchCluster) && (size(self.stretchCluster.zones) > 0) && (size(self.stretchCluster.zones) == 3))"
 type MonSpec struct {
 	// Count is the number of Ceph monitors
 	// +kubebuilder:validation:Minimum=0
@@ -2272,8 +2316,10 @@ type SSSDSidecarAdditionalFile struct {
 }
 
 // NetworkSpec for Ceph includes backward compatibility code
+// +kubebuilder:validation:XValidation:message="at least one network selector must be specified when using multus",rule="!has(self.provider) || (self.provider != 'multus' || (self.provider == 'multus' && size(self.selectors) > 0))"
 type NetworkSpec struct {
 	// Provider is what provides network connectivity to the cluster e.g. "host" or "multus"
+	// +kubebuilder:validation:XValidation:message="network provider must be disabled (reverted to empty string) before a new provider is enabled",rule="self == '' || self == oldSelf"
 	// +nullable
 	// +optional
 	Provider NetworkProviderType `json:"provider,omitempty"`
@@ -2441,6 +2487,11 @@ type DisruptionManagementSpec struct {
 	// No values or 0 means that the operator will wait until the placement groups are healthy before unblocking the next drain.
 	// +optional
 	PGHealthCheckTimeout time.Duration `json:"pgHealthCheckTimeout,omitempty"`
+
+	// PgHealthyRegex is the regular expression that is used to determine which PG states should be considered healthy.
+	// The default is `^(active\+clean|active\+clean\+scrubbing|active\+clean\+scrubbing\+deep)$`
+	// +optional
+	PGHealthyRegex string `json:"pgHealthyRegex,omitempty"`
 
 	// Deprecated. This enables management of machinedisruptionbudgets.
 	// +optional
@@ -2872,6 +2923,9 @@ type CephFilesystemSubVolumeGroupList struct {
 
 // CephFilesystemSubVolumeGroupSpec represents the specification of a Ceph Filesystem SubVolumeGroup
 type CephFilesystemSubVolumeGroupSpec struct {
+	// The name of the subvolume group. If not set, the default is the name of the subvolumeGroup CR.
+	// +optional
+	Name string `json:"name,omitempty"`
 	// FilesystemName is the name of Ceph Filesystem SubVolumeGroup volume name. Typically it's the name of
 	// the CephFilesystem CR. If not coming from the CephFilesystem CR, it can be retrieved from the
 	// list of Ceph Filesystem volumes with `ceph fs volume ls`. To learn more about Ceph Filesystem
@@ -2919,6 +2973,9 @@ type CephBlockPoolRadosNamespaceList struct {
 
 // CephBlockPoolRadosNamespaceSpec represents the specification of a CephBlockPool Rados Namespace
 type CephBlockPoolRadosNamespaceSpec struct {
+	// The name of the CephBlockPoolRadosNamespaceSpec namespace. If not set, the default is the name of the CR.
+	// +optional
+	Name string `json:"name,omitempty"`
 	// BlockPoolName is the name of Ceph BlockPool. Typically it's the name of
 	// the CephBlockPool CR.
 	BlockPoolName string `json:"blockPoolName"`

@@ -4,12 +4,12 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: rook-ceph-operator-config
+  namespace: {{ .Release.Namespace }} # namespace:operator
 data:
   ROOK_LOG_LEVEL: {{ .Values.logLevel | quote }}
   ROOK_CEPH_COMMANDS_TIMEOUT_SECONDS: {{ .Values.cephCommandsTimeoutSeconds | quote }}
   ROOK_OBC_WATCH_OPERATOR_NAMESPACE: {{ .Values.enableOBCWatchOperatorNamespace | quote }}
   ROOK_CEPH_ALLOW_LOOP_DEVICES: {{ .Values.allowLoopDevices | quote }}
-  ROOK_DISABLE_ADMISSION_CONTROLLER: {{ .Values.disableAdmissionController | quote }}
   ROOK_ENABLE_DISCOVERY_DAEMON: {{ .Values.enableDiscoveryDaemon | quote }}
 {{- if .Values.discoverDaemonUdev }}
   DISCOVER_DAEMON_UDEV_BLACKLIST: {{ .Values.discoverDaemonUdev | quote }}
@@ -183,6 +183,9 @@ data:
 {{- end }}
 {{- if .Values.csi.rbdLivenessMetricsPort }}
   CSI_RBD_LIVENESS_METRICS_PORT: {{ .Values.csi.rbdLivenessMetricsPort | quote }}
+{{- end }}
+{{- if .Values.csi.csiAddonsPort }}
+  CSIADDONS_PORT: {{ .Values.csi.csiAddonsPort | quote }}
 {{- end }}
 {{- if .Values.csi.forceCephFSKernelClient }}
   CSI_FORCE_CEPHFS_KERNEL_CLIENT: {{ .Values.csi.forceCephFSKernelClient | quote }}
