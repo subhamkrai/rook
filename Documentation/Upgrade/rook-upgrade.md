@@ -111,6 +111,8 @@ The upgrade steps in this guide will clarify what Helm handles automatically.
 
 The `rook-ceph` helm chart upgrade performs the Rook upgrade.
 The `rook-ceph-cluster` helm chart upgrade performs a [Ceph upgrade](#ceph-version-upgrades) if the Ceph image is updated.
+The `rook-ceph` chart should be upgraded before `rook-ceph-cluster`, so the latest operator has the opportunity to update
+custom resources as necessary.
 
 !!! note
     Be sure to update to a [supported Helm version](https://helm.sh/docs/topics/version_skew/#supported-version-skew)
@@ -154,7 +156,7 @@ by the Operator. Also update the Custom Resource Definitions (CRDs).
 Get the latest common resources manifests that contain the latest changes.
 
 ```console
-git clone --single-branch --depth=1 --branch v1.13.0-beta.0 https://github.com/rook/rook.git
+git clone --single-branch --depth=1 --branch v1.13.0 https://github.com/rook/rook.git
 cd rook/deploy/examples
 ```
 
@@ -193,7 +195,7 @@ The largest portion of the upgrade is triggered when the operator's image is upd
 When the operator is updated, it will proceed to update all of the Ceph daemons.
 
 ```console
-kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:v1.13.0-beta.0
+kubectl -n $ROOK_OPERATOR_NAMESPACE set image deploy/rook-ceph-operator rook-ceph-operator=rook/ceph:v1.13.0
 ```
 
 ### **3. Update Ceph CSI**
