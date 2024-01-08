@@ -255,7 +255,7 @@ func (r *ReconcileCephNFS) daemonContainer(nfs *cephv1.CephNFS, cfg daemonConfig
 
 func (r *ReconcileCephNFS) defaultGaneshaLivenessProbe(nfs *cephv1.CephNFS) *v1.Probe {
 	failureThreshold := int32(10)
-	cephVersionWithRpcinfo := version.CephVersion{Major: 18, Minor: 2, Extra: 1}
+	cephVersionWithRpcinfo := version.CephVersion{Major: 17, Minor: 2, Extra: 6}
 	if r.clusterInfo.CephVersion.IsAtLeast(cephVersionWithRpcinfo) {
 		// liveness-probe using rpcinfo utility
 		return controller.GenerateLivenessProbeViaRpcinfo(nfsPort, failureThreshold)
