@@ -343,6 +343,12 @@ func (c *Cluster) enablePrometheusModule() error {
 	if err := cephclient.MgrEnableModule(c.context, c.clusterInfo, PrometheusModuleName, true); err != nil {
 		return errors.Wrap(err, "failed to enable mgr prometheus module")
 	}
+	// Fetch performance counters from the prometheus exporter as ceph-exporter is disabled for 4.13
+	monStore := config.GetMonStore(c.context, c.clusterInfo)
+	err := monStore.Set("mgr", "mgr/prometheus/exclude_perf_counters", "false")
+	if err != nil {
+		return errors.Wrapf(err, "failed to disable exclude_perf_counters")
+	}
 	return nil
 }
 
