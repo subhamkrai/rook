@@ -57,6 +57,7 @@ jobs:
 
       - name: use local disk and create partitions for osds
         run: |
+          export BLOCK="/dev/$(tests/scripts/github-action-helper.sh find_extra_block_dev)"
           tests/scripts/github-action-helper.sh use_local_disk
           tests/scripts/create-bluestore-partitions.sh --disk "$BLOCK" --osd-count 1
 
@@ -108,41 +109,6 @@ jobs:
           name: canary-arm64
           path: test
 
-  smoke-suite-pacific-devel:
-    if: github.repository == 'rook/rook'
-    runs-on: ubuntu-20.04
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          kubernetes-version: "1.25.0"
-
-      - name: TestCephSmokeSuite
-        run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
-          SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION="pacific-devel" go test -v -timeout 1800s -run TestCephSmokeSuite github.com/rook/rook/tests/integration
-
-      - name: collect common logs
-        if: always()
-        run: |
-          export LOG_DIR="/home/runner/work/rook/rook/tests/integration/_output/tests/"
-          export CLUSTER_NAMESPACE="smoke-ns"
-          export OPERATOR_NAMESPACE="smoke-ns-system"
-          tests/scripts/collect-logs.sh
-
-      - name: Artifact
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: ceph-smoke-suite-pacific-artifact
-          path: /home/runner/work/rook/rook/tests/integration/_output/tests/
-
   smoke-suite-quincy-devel:
     if: github.repository == 'rook/rook'
     runs-on: ubuntu-20.04
@@ -160,7 +126,7 @@ jobs:
 
       - name: TestCephSmokeSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
           SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION="quincy-devel" go test -v -timeout 1800s -run TestCephSmokeSuite github.com/rook/rook/tests/integration
 
       - name: collect common logs
@@ -195,7 +161,7 @@ jobs:
 
       - name: TestCephSmokeSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
           SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION="reef-devel" go test -v -timeout 1800s -run TestCephSmokeSuite github.com/rook/rook/tests/integration
 
       - name: collect common logs
@@ -204,7 +170,7 @@ jobs:
           export LOG_DIR="/home/runner/work/rook/rook/tests/integration/_output/tests/"
           export CLUSTER_NAMESPACE="smoke-ns"
           export OPERATOR_NAMESPACE="smoke-ns-system"
-          tests/scripts/collect-logs.sh          
+          tests/scripts/collect-logs.sh
 
       - name: Artifact
         uses: actions/upload-artifact@v3
@@ -231,7 +197,7 @@ jobs:
 
       - name: TestCephSmokeSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
           SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION=main go test -v -timeout 1800s -run TestCephSmokeSuite github.com/rook/rook/tests/integration
 
       - name: collect common logs
@@ -266,8 +232,8 @@ jobs:
 
       - name: TestCephObjectSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
-          SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION="pacific-devel" go test -v -timeout 1800s -failfast -run TestCephObjectSuite github.com/rook/rook/tests/integration
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
+          SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION="quincy-devel" go test -v -timeout 1800s -failfast -run TestCephObjectSuite github.com/rook/rook/tests/integration
 
       - name: collect common logs
         if: always()
@@ -301,7 +267,7 @@ jobs:
 
       - name: TestCephObjectSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
           SKIP_CLEANUP_POLICY=false CEPH_SUITE_VERSION=main go test -v -timeout 1800s -failfast -run TestCephObjectSuite github.com/rook/rook/tests/integration
 
       - name: collect common logs
@@ -336,8 +302,8 @@ jobs:
 
       - name: TestCephUpgradeSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
-          go test -v -timeout 1800s -failfast -run TestCephUpgradeSuite/TestUpgradeCephToPacificDevel github.com/rook/rook/tests/integration
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
+          go test -v -timeout 1800s -failfast -run TestCephUpgradeSuite/TestUpgradeCephToReefDevel github.com/rook/rook/tests/integration
 
       - name: collect common logs
         if: always()
@@ -371,7 +337,7 @@ jobs:
 
       - name: TestCephUpgradeSuite
         run: |
-          export DEVICE_FILTER=$(lsblk|awk '/14G/ || /64G/ {print $1}'| head -1)
+          export DEVICE_FILTER=$(tests/scripts/github-action-helper.sh find_extra_block_dev)
           go test -v -timeout 1800s -failfast -run TestCephUpgradeSuite/TestUpgradeCephToQuincyDevel github.com/rook/rook/tests/integration
 
       - name: collect common logs
