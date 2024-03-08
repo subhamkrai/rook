@@ -158,7 +158,7 @@ fmt: $(YQ) ## Check formatting of go sources.
 
 fmt-fix: $(YQ) ## Reformatting of go sources.
 	@$(MAKE) go.fmt-fix
- 
+
 golangci-lint: $(YQ)
 	@$(MAKE) go.golangci-lint
 
@@ -199,7 +199,20 @@ distclean: clean ## Remove all files that are created by building or configuring
 prune: ## Prune cached artifacts.
 	@$(MAKE) -C images prune
 
+# Change how CRDs are generated for CSVs
+gen-csv: export MAX_DESC_LEN=0 # sets the description length to 0 since CSV cannot be bigger than 1MB
+gen-csv: export NO_OB_OBC_VOL_GEN=true
+gen-csv: csv-clean crds ## Generate a CSV file for OLM.
+	$(MAKE) -C images/ceph csv
+
+csv-clean: ## Remove existing OLM files.
+	@$(MAKE) -C images/ceph csv-clean
+
+docs: helm-docs
+	@build/deploy/generate-deploy-examples.sh
+
 gen.crds: crds
+
 crds: $(CONTROLLER_GEN) $(YQ)
 	@echo Updating CRD manifests
 	@build/crds/build-crds.sh $(CONTROLLER_GEN) $(YQ)

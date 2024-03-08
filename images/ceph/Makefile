@@ -61,6 +61,8 @@ do.build:
 	@cp -r $(MANIFESTS_DIR)/monitoring $(BUILD_CONTEXT_DIR)/ceph-monitoring
 	@mkdir -p $(BUILD_CONTEXT_DIR)/rook-external/test-data
 	@cp $(MANIFESTS_DIR)/create-external-cluster-resources.* $(BUILD_CONTEXT_DIR)/rook-external/
+	@cp ../../tests/ceph-status-out $(BUILD_CONTEXT_DIR)/rook-external/test-data/
+
 	@cd $(BUILD_CONTEXT_DIR) && $(SED_IN_PLACE) 's|BASEIMAGE|$(BASEIMAGE)|g' Dockerfile
 	@if [ -z "$(BUILD_CONTAINER_IMAGE)" ]; then\
 		$(DOCKERCMD) build --platform linux/$(GOARCH) $(BUILD_ARGS) \
@@ -90,6 +92,18 @@ $(OPERATOR_SDK):
 		https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$(REAL_HOST_PLATFORM)
 	@chmod +x $(OPERATOR_SDK)
 	@$(OPERATOR_SDK) version
+
+csv: $(OPERATOR_SDK) $(YQv3)
+	@echo generate csv with latest operator-sdk
+	@mkdir -p ../../build/csv/ceph
+	@../../build/csv/csv-gen.sh
+	@# #adding 2>/dev/null since CI doesn't seems to be creating bundle.Dockerfile file
+	@rm bundle.Dockerfile 2> /dev/null || true
+	@git restore $(MANIFESTS_DIR)/crds.yaml ../../deploy/charts/rook-ceph/templates/resources.yaml
+
+csv-clean: ## Remove existing OLM files.
+	@rm -fr ../../build/csv/ceph/${go env GOARCH}
+	@rm -f ../../build/csv/rook-ceph.clusterserviceversion.yaml
 
 # reading from a file and outputting to the same file can have undefined results, so use this intermediate
 IMAGE_TMP="/tmp/rook-ceph-image-list"
