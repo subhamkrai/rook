@@ -37,6 +37,9 @@ data:
   ROOK_CSI_ENABLE_NFS: "false"
   ROOK_CSI_ENABLE_GRPC_METRICS: "false"
 
+  # Disable the CSI driver.
+  ROOK_CSI_DISABLE_DRIVER: "false"
+
   # Set to true to enable Ceph CSI pvc encryption support.
   CSI_ENABLE_ENCRYPTION: "false"
 
