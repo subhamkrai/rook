@@ -33,6 +33,8 @@ spec:
             type: object
           spec:
             properties:
+              dataPoolName:
+                type: string
               filesystemName:
                 type: string
                 x-kubernetes-validations:
@@ -67,6 +69,12 @@ spec:
                     || (!has(self.export) && has(self.distributed) && !has(self.random))
                     || (!has(self.export) && !has(self.distributed) && has(self.random))
                     || (!has(self.export) && !has(self.distributed) && !has(self.random))
+              quota:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
             required:
             - filesystemName
             type: object
