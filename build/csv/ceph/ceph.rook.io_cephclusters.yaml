@@ -2951,6 +2951,8 @@ spec:
                       type: object
                     type: array
                 type: object
+              upgradeOSDRequiresHealthyPGs:
+                type: boolean
               waitTimeoutForHealthyOSDInMinutes:
                 format: int64
                 type: integer
