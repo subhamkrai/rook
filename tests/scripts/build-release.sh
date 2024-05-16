@@ -7,7 +7,7 @@ set -ex
 
 MAKE='make --debug=v --output-sync'
 
-function  build() {
+function build() {
     $MAKE build.all
     # quick check that go modules are tidied
     $MAKE mod.check
@@ -70,9 +70,8 @@ else
     fi
 fi
 
-
 publish
 
 if [[ "$SHOULD_PROMOTE" = true ]]; then
-  promote
+    promote
 fi
