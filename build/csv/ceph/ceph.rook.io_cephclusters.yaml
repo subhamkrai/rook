@@ -438,6 +438,16 @@ spec:
                           type: boolean
                         name:
                           type: string
+                        settings:
+                          properties:
+                            balancerMode:
+                              enum:
+                              - ""
+                              - crush-compat
+                              - upmap
+                              - upmap-read
+                              type: string
+                          type: object
                       type: object
                     nullable: true
                     type: array
