@@ -473,8 +473,9 @@ type Capacity struct {
 
 // CephStorage represents flavors of Ceph Cluster Storage
 type CephStorage struct {
-	DeviceClasses []DeviceClasses `json:"deviceClasses,omitempty"`
-	OSD           OSDStatus       `json:"osd,omitempty"`
+	DeviceClasses  []DeviceClasses  `json:"deviceClasses,omitempty"`
+	OSD            OSDStatus        `json:"osd,omitempty"`
+	DeprecatedOSDs map[string][]int `json:"deprecatedOSDs,omitempty"`
 }
 
 // DeviceClasses represents device classes of a Ceph Cluster
@@ -672,6 +673,14 @@ type Module struct {
 	// Enabled determines whether a module should be enabled or not
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
+	// Settings to further configure the module
+	Settings ModuleSettings `json:"settings,omitempty"`
+}
+
+type ModuleSettings struct {
+	// BalancerMode sets the `balancer` module with different modes like `upmap`, `crush-compact` etc
+	// +kubebuilder:validation:Enum="";crush-compat;upmap;upmap-read
+	BalancerMode string `json:"balancerMode,omitempty"`
 }
 
 // ExternalSpec represents the options supported by an external cluster

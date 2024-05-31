@@ -438,6 +438,16 @@ spec:
                           type: boolean
                         name:
                           type: string
+                        settings:
+                          properties:
+                            balancerMode:
+                              enum:
+                              - ""
+                              - crush-compat
+                              - upmap
+                              - upmap-read
+                              type: string
+                          type: object
                       type: object
                     nullable: true
                     type: array
@@ -3065,6 +3075,12 @@ spec:
                 type: string
               storage:
                 properties:
+                  deprecatedOSDs:
+                    additionalProperties:
+                      items:
+                        type: integer
+                      type: array
+                    type: object
                   deviceClasses:
                     items:
                       properties:

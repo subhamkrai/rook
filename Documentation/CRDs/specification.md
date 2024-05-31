@@ -4054,6 +4054,16 @@ OSDStatus
 <td>
 </td>
 </tr>
+<tr>
+<td>
+<code>deprecatedOSDs</code><br/>
+<em>
+map[string][]int
+</em>
+</td>
+<td>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ceph.rook.io/v1.CephVersionSpec">CephVersionSpec
@@ -7977,6 +7987,47 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Enabled determines whether a module should be enabled or not</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>settings</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ModuleSettings">
+ModuleSettings
+</a>
+</em>
+</td>
+<td>
+<p>Settings to further configure the module</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ceph.rook.io/v1.ModuleSettings">ModuleSettings
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.Module">Module</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>balancerMode</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BalancerMode sets the <code>balancer</code> module with different modes like <code>upmap</code>, <code>crush-compact</code> etc</p>
 </td>
 </tr>
 </tbody>
