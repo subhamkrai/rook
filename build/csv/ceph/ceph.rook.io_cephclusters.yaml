@@ -1502,6 +1502,11 @@ spec:
               storage:
                 nullable: true
                 properties:
+                  backfillFullRatio:
+                    maximum: 1
+                    minimum: 0
+                    nullable: true
+                    type: number
                   config:
                     additionalProperties:
                       type: string
@@ -1531,6 +1536,16 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   flappingRestartIntervalHours:
                     type: integer
+                  fullRatio:
+                    maximum: 1
+                    minimum: 0
+                    nullable: true
+                    type: number
+                  nearFullRatio:
+                    maximum: 1
+                    minimum: 0
+                    nullable: true
+                    type: number
                   nodes:
                     items:
                       properties:
