@@ -463,6 +463,12 @@ func createReplicatedPoolForApp(context *clusterd.Context, clusterInfo *ClusterI
 }
 
 func updatePoolCrushRule(context *clusterd.Context, clusterInfo *ClusterInfo, clusterSpec *cephv1.ClusterSpec, pool cephv1.NamedPoolSpec) error {
+
+	if !pool.EnableCrushUpdates {
+		logger.Debugf("Skipping crush rule update for pool %q: EnableCrushUpdates is disabled", pool.Name)
+		return nil
+	}
+
 	if pool.FailureDomain == "" && pool.DeviceClass == "" {
 		logger.Debugf("skipping check for failure domain and deviceClass on pool %q as it is not specified", pool.Name)
 		return nil
@@ -529,7 +535,15 @@ func extractPoolDetails(rule ruleSpec) (string, string) {
 			failureDomain = step.Type
 		}
 		if step.ItemName != "" {
-			deviceClass = step.ItemName
+			// we are not using crushRoot currently, remove it
+			// from crush rule
+			if strings.Contains(step.ItemName, "~") {
+				crushRootAndDeviceClass := step.ItemName
+				parts := strings.SplitN(crushRootAndDeviceClass, "~", 2)
+				deviceClass = parts[1]
+			} else {
+				deviceClass = step.ItemName
+			}
 		}
 		// We expect the rule to be found by the second step, or else it is a more
 		// complex rule that would not be supported for updating the failure domain
