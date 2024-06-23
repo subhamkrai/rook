@@ -1742,7 +1742,6 @@ spec:
                         encrypted:
                           type: boolean
                         name:
-                          maxLength: 40
                           type: string
                         placement:
                           nullable: true
