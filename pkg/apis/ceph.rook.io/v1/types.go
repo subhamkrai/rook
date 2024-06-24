@@ -2938,7 +2938,6 @@ type PriorityClassNamesSpec map[KeyType]string
 // +nullable
 type StorageClassDeviceSet struct {
 	// Name is a unique identifier for the set
-	// +kubebuilder:validation:MaxLength=40
 	Name string `json:"name"`
 	// Count is the number of devices in this set
 	// +kubebuilder:validation:Minimum=1
