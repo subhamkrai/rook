@@ -3130,6 +3130,12 @@ spec:
                     allowDeviceClassUpdate:
                       description: Whether to allow updating the device class after the OSD is initially provisioned
                       type: boolean
+                    allowOsdCrushWeightUpdate:
+                      description: |-
+                        Whether Rook will resize the OSD CRUSH weight when the OSD PVC size is increased.
+                        This allows cluster data to be rebalanced to make most effective use of new OSD space.
+                        The default is false since data rebalancing can cause temporary cluster slowdown.
+                      type: boolean
                     config:
                       additionalProperties:
                         type: string
