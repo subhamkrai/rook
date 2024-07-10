@@ -148,6 +148,10 @@ spec:
               value: unix:///csi/csi-addons.sock
             {{ end }}
           imagePullPolicy: {{ .ImagePullPolicy }}
+          {{ if and .Privileged .CSILogRotation }}
+          securityContext:
+            privileged: true
+          {{ end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -166,6 +170,10 @@ spec:
             - name: ceph-config
               mountPath: /etc/ceph/ceph.conf
               subPath: ceph.conf
+            {{ end }}
+            {{ if .EnableCSIEncryption }}
+            - name: rook-ceph-csi-kms-config
+              mountPath: /etc/ceph-csi-encryption-kms-config/
             {{ end }}
         {{ if .EnableCSIAddonsSideCar }}
         - name: csi-addons
@@ -205,6 +213,10 @@ spec:
             - name: CSIADDONS_ENDPOINT
               value: unix:///csi/csi-addons.sock
           imagePullPolicy: {{ .ImagePullPolicy }}
+          {{ if and .Privileged .CSILogRotation }}
+          securityContext:
+            privileged: true
+          {{ end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -262,4 +274,12 @@ spec:
             items:
             - key: ceph.conf
               path: ceph.conf
+        {{ end }}
+        {{ if .EnableCSIEncryption }}
+        - name: rook-ceph-csi-kms-config
+          configMap:
+            name: rook-ceph-csi-kms-config
+            items:
+            - key: config.json
+              path: config.json
         {{ end }}
