@@ -3127,6 +3127,9 @@ spec:
                   description: A spec for available storage in the cluster and how it should be used
                   nullable: true
                   properties:
+                    allowDeviceClassUpdate:
+                      description: Whether to allow updating the device class after the OSD is initially provisioned
+                      type: boolean
                     config:
                       additionalProperties:
                         type: string
