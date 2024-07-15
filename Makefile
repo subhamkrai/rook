@@ -192,7 +192,6 @@ csv-clean: ## Remove existing OLM files.
 	@$(MAKE) -C images/ceph csv-clean
 
 docs: helm-docs
-	@build/deploy/generate-deploy-examples.sh
 
 crds: $(CONTROLLER_GEN) $(YQ)
 	@echo Updating CRD manifests
