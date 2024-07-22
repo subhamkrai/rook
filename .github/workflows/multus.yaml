@@ -39,7 +39,7 @@ jobs:
       - name: Set up Go version
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
 
       - name: Create KinD Cluster
         uses: helm/kind-action@v1.10.0
@@ -54,6 +54,9 @@ jobs:
 
       - name: Setup multus
         run: ./tests/scripts/multus/setup-multus.sh
+
+      - name: Set up multus prerequisite host routing
+        run: kubectl create -f tests/scripts/multus/host-cfg-ds.yaml
 
       - name: Install public and cluster NADs in default namespace
         run: kubectl create -f tests/scripts/multus/default-public-cluster-nads.yaml

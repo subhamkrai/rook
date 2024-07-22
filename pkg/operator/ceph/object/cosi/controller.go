@@ -51,6 +51,7 @@ const (
 	cosiSocketMountPath       = "/var/lib/cosi"
 	DefaultServiceAccountName = "objectstorage-provisioner"
 	cosiSocketVolumeName      = "socket"
+	CephCOSIDriverPrefix      = "rook-ceph"
 )
 
 var (
@@ -93,13 +94,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	logger.Info("successfully started")
 	// Watch for changes to CephCOSIDriver
-	err = controller.Watch(source.Kind(mgr.GetCache(), &cephv1.CephCOSIDriver{}), &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
+	err = controller.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephCOSIDriver{}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
 	if err != nil {
 		return errors.Wrap(err, "failed to watch for CephCOSIDriver object changes")
 	}
 
 	// Watch for changes to CephObjectStore as arbitrary resource and predicate functions
-	err = controller.Watch(source.Kind(mgr.GetCache(), &cephv1.CephObjectStore{}), &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
+	err = controller.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephObjectStore{}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
 	if err != nil {
 		return errors.Wrap(err, "failed to watch for CephObjectStore object changes")
 	}

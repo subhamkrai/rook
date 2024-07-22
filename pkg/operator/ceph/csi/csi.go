@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rook/rook/pkg/operator/ceph/controller"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 
 	"github.com/pkg/errors"
@@ -123,6 +124,8 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse value for 'CSI_ENABLE_LIVENESS'")
 	}
+
+	CSIParam.Privileged = controller.HostPathRequiresPrivileged()
 
 	// default value `system-node-critical` is the highest available priority
 	CSIParam.PluginPriorityClassName = k8sutil.GetValue(r.opConfig.Parameters, "CSI_PLUGIN_PRIORITY_CLASSNAME", "")
@@ -328,6 +331,28 @@ func (r *ReconcileCSI) setParams(ver *version.Info) error {
 	CSIParam.EnableVolumeGroupSnapshot = true
 	if strings.EqualFold(k8sutil.GetValue(r.opConfig.Parameters, "CSI_ENABLE_VOLUME_GROUP_SNAPSHOT", "true"), "false") {
 		CSIParam.EnableVolumeGroupSnapshot = false
+	}
+
+	kubeApiBurst := k8sutil.GetValue(r.opConfig.Parameters, "CSI_KUBE_API_BURST", "")
+	CSIParam.KubeApiBurst = 0
+	if kubeApiBurst != "" {
+		k, err := strconv.ParseUint(kubeApiBurst, 10, 16)
+		if err != nil {
+			logger.Errorf("failed to parse CSI_KUBE_API_BURST. %v", err)
+		} else {
+			CSIParam.KubeApiBurst = uint16(k)
+		}
+	}
+
+	kubeApiQPS := k8sutil.GetValue(r.opConfig.Parameters, "CSI_KUBE_API_QPS", "")
+	CSIParam.KubeApiQPS = 0
+	if kubeApiQPS != "" {
+		k, err := strconv.ParseFloat(kubeApiQPS, 32)
+		if err != nil {
+			logger.Errorf("failed to parse CSI_KUBE_API_QPS. %v", err)
+		} else {
+			CSIParam.KubeApiQPS = float32(k)
+		}
 	}
 
 	return nil

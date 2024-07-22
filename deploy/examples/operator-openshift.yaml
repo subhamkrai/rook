@@ -632,6 +632,12 @@ data:
   #       requests:
   #         cpu: 200m
   #         memory: 128Mi
+
+  # (Optional) Burst to use while communicating with the kubernetes apiserver.
+  # CSI_KUBE_API_BURST: "10"
+
+  # (Optional) QPS to use while communicating with the kubernetes apiserver.
+  # CSI_KUBE_API_QPS: "5.0"
 ---
 # The deployment for the rook operator
 # OLM: BEGIN OPERATOR DEPLOYMENT
@@ -701,6 +707,10 @@ spec:
               value: 600s
             - name: ROOK_DISCOVER_DEVICES_INTERVAL
               value: 60m
+
+            # Whether to start pods as privileged that mount a host path, which includes the Ceph mon, osd pods and csi provisioners(if logrotation is on).
+            # Set this to true if SELinux is enabled (e.g. OpenShift) to workaround the anyuid issues.
+            # For more details see https://github.com/rook/rook/issues/1314#issuecomment-355799641
             - name: ROOK_HOSTPATH_REQUIRES_PRIVILEGED
               value: "true"
             - name: ROOK_ENABLE_SELINUX_RELABELING

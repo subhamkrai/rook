@@ -111,7 +111,7 @@ func add(opManagerContext context.Context, mgr manager.Manager, r reconcile.Reco
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephBlockPool CRD object
-	err = c.Watch(source.Kind(mgr.GetCache(), &cephv1.CephBlockPool{TypeMeta: controllerTypeMeta}), &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate())
+	err = c.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephBlockPool{TypeMeta: controllerTypeMeta}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
 	if err != nil {
 		return err
 	}
@@ -124,8 +124,10 @@ func add(opManagerContext context.Context, mgr manager.Manager, r reconcile.Reco
 	}
 
 	// Watch for ConfigMap "rook-ceph-mon-endpoints" update and reconcile, which will reconcile update the bootstrap peer token
-	cmSource := source.Kind(mgr.GetCache(), &corev1.ConfigMap{TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: corev1.SchemeGroupVersion.String()}})
-	err = c.Watch(cmSource, handler.EnqueueRequestsFromMapFunc(handlerFunc), mon.PredicateMonEndpointChanges())
+	cmSource := source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: corev1.SchemeGroupVersion.String()}},
+		handler.EnqueueRequestsFromMapFunc(handlerFunc), mon.PredicateMonEndpointChanges(),
+	)
+	err = c.Watch(cmSource)
 	if err != nil {
 		return err
 	}
@@ -364,7 +366,7 @@ func (r *ReconcileCephBlockPool) reconcileCreatePool(clusterInfo *cephclient.Clu
 	poolSpec := cephBlockPool.ToNamedPoolSpec()
 	err := createPool(r.context, clusterInfo, cephCluster, &poolSpec)
 	if err != nil {
-		return opcontroller.ImmediateRetryResult, errors.Wrapf(err, "failed to create pool %q.", cephBlockPool.GetName())
+		return opcontroller.ImmediateRetryResult, errors.Wrapf(err, "failed to configure pool %q.", cephBlockPool.GetName())
 	}
 
 	// Let's return here so that on the initial creation we don't check for update right away
@@ -380,7 +382,7 @@ func createPool(context *clusterd.Context, clusterInfo *cephclient.ClusterInfo, 
 	// create the pool
 	logger.Infof("creating pool %q in namespace %q", p.Name, clusterInfo.Namespace)
 	if err := cephclient.CreatePool(context, clusterInfo, clusterSpec, *p); err != nil {
-		return errors.Wrapf(err, "failed to create pool %q", p.Name)
+		return errors.Wrapf(err, "failed to configure pool %q", p.Name)
 	}
 
 	if p.Application != poolApplicationNameRBD {

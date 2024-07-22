@@ -33,6 +33,12 @@ spec:
             - "--leader-election-lease-duration={{ .LeaderElectionLeaseDuration }}"
             - "--leader-election-renew-deadline={{ .LeaderElectionRenewDeadline }}"
             - "--leader-election-retry-period={{ .LeaderElectionRetryPeriod }}"
+            {{ if .KubeApiBurst }}
+            - "--kube-api-burst={{ .KubeApiBurst }}"
+            {{ end }}
+            {{ if .KubeApiQPS }}
+            - "--kube-api-qps={{ .KubeApiQPS }}"
+            {{ end }}
           env:
             - name: ADDRESS
               value: /csi/csi-provisioner.sock
@@ -54,6 +60,12 @@ spec:
             - "--leader-election-renew-deadline={{ .LeaderElectionRenewDeadline }}"
             - "--leader-election-retry-period={{ .LeaderElectionRetryPeriod }}"
             - "--extra-create-metadata=true"
+            {{ if .KubeApiBurst }}
+            - "--kube-api-burst={{ .KubeApiBurst }}"
+            {{ end }}
+            {{ if .KubeApiQPS }}
+            - "--kube-api-qps={{ .KubeApiQPS }}"
+            {{ end }}
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
@@ -75,6 +87,12 @@ spec:
             - "--leader-election-retry-period={{ .LeaderElectionRetryPeriod }}"
             - "--handle-volume-inuse-error=false"
             - "--feature-gates=RecoverVolumeExpansionFailure=true"
+            {{ if .KubeApiBurst }}
+            - "--kube-api-burst={{ .KubeApiBurst }}"
+            {{ end }}
+            {{ if .KubeApiQPS }}
+            - "--kube-api-qps={{ .KubeApiQPS }}"
+            {{ end }}
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
@@ -96,6 +114,12 @@ spec:
             - "--leader-election-lease-duration={{ .LeaderElectionLeaseDuration }}"
             - "--leader-election-renew-deadline={{ .LeaderElectionRenewDeadline }}"
             - "--leader-election-retry-period={{ .LeaderElectionRetryPeriod }}"
+            {{ if .KubeApiBurst }}
+            - "--kube-api-burst={{ .KubeApiBurst }}"
+            {{ end }}
+            {{ if .KubeApiQPS }}
+            - "--kube-api-qps={{ .KubeApiQPS }}"
+            {{ end }}
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
@@ -113,6 +137,11 @@ spec:
             - "--controllerserver=true"
             - "--drivername={{ .DriverNamePrefix }}nfs.csi.ceph.com"
             - "--pidlimit=-1"
+            {{ if .CSILogRotation }}
+            - "--logtostderr=false"
+            - "--alsologtostderr=true"
+            - "--log_file={{ .CsiLogRootPath }}/log/{{ .CsiComponentName }}/csi-nfsplugin.log"
+            {{ end }}
           env:
             - name: POD_IP
               valueFrom:
@@ -129,6 +158,10 @@ spec:
             - name: CSI_ENDPOINT
               value: unix:///csi/csi-provisioner.sock
           imagePullPolicy: {{ .ImagePullPolicy }}
+          {{ if and .Privileged .CSILogRotation }}
+          securityContext:
+            privileged: true
+          {{ end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -143,6 +176,10 @@ spec:
               mountPath: /etc/ceph-csi-config/
             - name: keys-tmp-dir
               mountPath: /tmp/csi/keys
+            {{ if .CSILogRotation }}
+            - mountPath: {{ .CsiLogRootPath }}/log/{{ .CsiComponentName }}
+              name: csi-log
+            {{ end }}
             {{ if .MountCustomCephConf }}
             - name: ceph-config
               mountPath: /etc/ceph/ceph.conf
@@ -172,6 +209,15 @@ spec:
           emptyDir: {
             medium: "Memory"
           }
+        {{ if .CSILogRotation }}
+        - name: csi-log
+          hostPath:
+            path: {{ .CsiLogRootPath }}/log/{{ .CsiComponentName }}
+            type: DirectoryOrCreate
+        - name: csi-logs-logrotate
+          emptyDir:
+            type: DirectoryOrCreate
+        {{ end }}
         {{ if .MountCustomCephConf }}
         - name: ceph-config
           configMap:

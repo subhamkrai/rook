@@ -179,6 +179,11 @@ func testCreateReplicaPool(t *testing.T, failureDomain, crushRoot, deviceClass, 
 				assert.Equal(t, "12345", args[8])
 				return "", nil
 			}
+			if args[2] == "get" {
+				assert.Equal(t, "mypool", args[3])
+				assert.Equal(t, "all", args[4])
+				return `{"pool":"replicapool","pool_id":2,"size":1,"min_size":1,"crush_rule":"replicapool_osd"}`, nil
+			}
 			if args[2] == "set" {
 				assert.Equal(t, "mypool", args[3])
 				if args[4] == "size" {
@@ -203,8 +208,12 @@ func testCreateReplicaPool(t *testing.T, failureDomain, crushRoot, deviceClass, 
 		if args[1] == "crush" {
 			crushRuleCreated = true
 			assert.Equal(t, "rule", args[2])
+			if args[3] == "dump" {
+				assert.Equal(t, "replicapool_osd", args[4])
+				return `{"rule_id": 3,"rule_name": "replicapool_osd","type": 1}`, nil
+			}
 			assert.Equal(t, "create-replicated", args[3])
-			assert.Equal(t, "mypool", args[4])
+			assert.Contains(t, args[4], "mypool")
 			if crushRoot == "" {
 				assert.Equal(t, "cluster-crush-root", args[5])
 			} else {
@@ -251,10 +260,12 @@ func TestUpdateFailureDomain(t *testing.T) {
 	currentFailureDomain := "rack"
 	currentDeviceClass := "default"
 	testCrushRuleName := "test_rule"
+	cephCommandCalled := false
 	executor := &exectest.MockExecutor{}
 	context := &clusterd.Context{Executor: executor}
 	executor.MockExecuteCommandWithOutput = func(command string, args ...string) (string, error) {
 		logger.Infof("Command: %s %v", command, args)
+		cephCommandCalled = true
 		if args[1] == "pool" {
 			if args[2] == "get" {
 				assert.Equal(t, "mypool", args[3])
@@ -334,6 +345,27 @@ func TestUpdateFailureDomain(t *testing.T) {
 		err := updatePoolCrushRule(context, AdminTestClusterInfo("mycluster"), clusterSpec, p)
 		assert.NoError(t, err)
 		assert.Equal(t, "mypool_zone", newCrushRule)
+	})
+
+	t.Run("stretch cluster skips crush rule update", func(t *testing.T) {
+		p := cephv1.NamedPoolSpec{
+			Name: "mypool",
+			PoolSpec: cephv1.PoolSpec{
+				FailureDomain:      "zone",
+				Replicated:         cephv1.ReplicatedSpec{Size: 3},
+				EnableCrushUpdates: true,
+			},
+		}
+		clusterSpec := &cephv1.ClusterSpec{
+			Mon:     cephv1.MonSpec{StretchCluster: &cephv1.StretchClusterSpec{Zones: []cephv1.MonZoneSpec{{Name: "zone1"}, {Name: "zone2"}, {Name: "zone3", Arbiter: true}}}},
+			Storage: cephv1.StorageScopeSpec{},
+		}
+		newCrushRule = ""
+		cephCommandCalled = false
+		err := updatePoolCrushRule(context, AdminTestClusterInfo("mycluster"), clusterSpec, p)
+		assert.NoError(t, err)
+		assert.Equal(t, "", newCrushRule)
+		assert.False(t, cephCommandCalled)
 	})
 }
 

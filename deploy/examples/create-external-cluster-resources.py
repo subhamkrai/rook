@@ -21,6 +21,7 @@ import argparse
 import re
 import subprocess
 import hmac
+import configparser
 from hashlib import sha1 as sha
 from os import linesep as LINESEP
 from os import path
@@ -280,10 +281,10 @@ class RadosJSON:
         common_group = argP.add_argument_group("common")
         common_group.add_argument("--verbose", "-v", action="store_true", default=False)
         common_group.add_argument(
-            "--ceph-conf", "-c", help="Provide a ceph conf file.", type=str
+            "--ceph-conf", "-c", help="Provide a ceph conf file.", type=str, default=""
         )
         common_group.add_argument(
-            "--keyring", "-k", help="Path to ceph keyring file.", type=str
+            "--keyring", "-k", help="Path to ceph keyring file.", type=str, default=""
         )
         common_group.add_argument(
             "--run-as-user",
@@ -478,6 +479,16 @@ class RadosJSON:
             + "Upgrade flag should only be used to append new permissions to users, it shouldn't be used for changing user already applied permission, for example you shouldn't change in which pool user has access",
         )
 
+        # Add command-line arguments
+        config_group = argP.add_argument_group("config")
+        config_group.add_argument(
+            "--config-file",
+            type=str,
+            help="Path to the configuration file, Priority: command-line-args > config.ini file values > default values",
+            required=False,
+            default="",
+        )
+
         if args_to_parse:
             assert (
                 type(args_to_parse) == list
@@ -617,10 +628,29 @@ class RadosJSON:
             ("-1"),
         )
 
+    def parse_config_file(self, config_file):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        for arg in list(vars(self._arg_parser)):
+            # python treats flag-name as flag_name internally, so converting back to flag-name,
+            # so we can get those values from config file
+            argument = arg.replace("_", "-")
+            argumentValue = str(getattr(self._arg_parser, arg))
+            config_value = config.get("Configurations", argument, fallback=None)
+            # give priority to command line argument, if command line argument is not present use config.ini value,
+            if (str(sys.argv).find(argument) == -1) and (
+                (config_value != None) and (config_value != "")
+            ):
+                self._arg_parser.__setattr__(arg, config_value)
+
+        return config
+
     def __init__(self, arg_list=None):
         self.out_map = {}
         self._excluded_keys = set()
         self._arg_parser = self.gen_arg_parser(args_to_parse=arg_list)
+        if self._arg_parser.config_file:
+            self.config = self.parse_config_file(self._arg_parser.config_file)
         self._check_conflicting_options()
         self.run_as_user = self._arg_parser.run_as_user
         self.output_file = self._arg_parser.output
@@ -1528,6 +1558,24 @@ class RadosJSON:
         for pool in topology_rbd_pools:
             self.init_rbd_pool(pool)
 
+    def getScriptCliFlags(self):
+        return " ".join(sys.argv[1:])
+
+    # this will return the final args that script uses to process
+    # the priority to set a particular value is,
+    # command-line-args > config.ini file values > default values
+    def getFinalUsedArgs(self):
+        list = []
+        for arg in vars(self._arg_parser):
+            if str(getattr(self._arg_parser, arg)):
+                # python treats flag-name as flag_name internally, so converting back to flag-name,
+                # so we can get those values from config file
+                argument = (
+                    arg.replace("_", "-") + ": " + str(getattr(self._arg_parser, arg))
+                )
+                list.append(argument)
+        return list
+
     def _gen_output_map(self):
         if self.out_map:
             return
@@ -1542,6 +1590,9 @@ class RadosJSON:
         self.validate_rados_namespace()
         self._excluded_keys.add("K8S_CLUSTER_NAME")
         self.get_cephfs_data_pool_details()
+        # double string needed for upstream exports of flags
+        self.out_map["EXTERNAL_CLUSTER_USER_COMMAND"] = f'"{self.getScriptCliFlags()}"'
+        self.out_map["ARGS"] = f'"{self.getFinalUsedArgs()}"'
         self.out_map["NAMESPACE"] = self._arg_parser.namespace
         self.out_map["K8S_CLUSTER_NAME"] = self._arg_parser.k8s_cluster_name
         self.out_map["ROOK_EXTERNAL_FSID"] = self.get_fsid()
@@ -1702,6 +1753,14 @@ class RadosJSON:
         if self._arg_parser.dry_run:
             return ""
         json_out = [
+            {
+                "name": "external-cluster-user-command",
+                "kind": "ConfigMap",
+                "data": {
+                    "command": self.out_map["EXTERNAL_CLUSTER_USER_COMMAND"],
+                    "args": self.out_map["ARGS"],
+                },
+            },
             {
                 "name": "rook-ceph-mon-endpoints",
                 "kind": "ConfigMap",

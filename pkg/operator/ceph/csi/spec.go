@@ -20,6 +20,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +53,7 @@ type Param struct {
 	ResizerImage                             string
 	DriverNamePrefix                         string
 	KubeletDirPath                           string
+	CsiLogRootPath                           string
 	ForceCephFSKernelClient                  string
 	CephFSKernelMountOptions                 string
 	CephFSPluginUpdateStrategy               string
@@ -90,6 +92,8 @@ type Param struct {
 	CephFSLivenessMetricsPort                uint16
 	CSIAddonsPort                            uint16
 	RBDLivenessMetricsPort                   uint16
+	KubeApiBurst                             uint16
+	KubeApiQPS                               float32
 	LeaderElectionLeaseDuration              time.Duration
 	LeaderElectionRenewDeadline              time.Duration
 	LeaderElectionRetryPeriod                time.Duration
@@ -97,6 +101,11 @@ type Param struct {
 	CSICephFSPodLabels                       map[string]string
 	CSINFSPodLabels                          map[string]string
 	CSIRBDPodLabels                          map[string]string
+	CSILogRotation                           bool
+	CsiComponentName                         string
+	CSILogRotationMaxSize                    string
+	CSILogRotationPeriod                     string
+	Privileged                               bool
 }
 
 type templateParam struct {
@@ -178,7 +187,12 @@ var (
 	//go:embed template/nfs/csi-nfsplugin-holder.yaml
 	NFSPluginHolderTemplatePath string
 
+	//go:embed template/csi-logrotate-sidecar.yaml
+	LogrotateTemplatePath string
+
 	holderEnabled bool
+
+	csiRootPath string
 )
 
 const (
@@ -279,6 +293,8 @@ const (
 	rbdDriverSuffix       = "rbd.csi.ceph.com"
 	cephFSDriverSuffix    = "cephfs.csi.ceph.com"
 	nfsDriverSuffix       = "nfs.csi.ceph.com"
+	nodePlugin            = "node-plugin"
+	controllerPlugin      = "controller-plugin"
 )
 
 func CSIEnabled() bool {
@@ -345,14 +361,23 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 	tp.Param.MountCustomCephConf = CustomCSICephConfigExists
 
 	if EnableRBD {
+		tp.CsiComponentName = nodePlugin
+		tp.CsiLogRootPath = path.Join(csiRootPath, RBDDriverName)
 		rbdPlugin, err = templateToDaemonSet("rbdplugin", RBDPluginTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load rbdplugin template")
 		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&rbdPlugin.Spec.Template, "csi-rbd-daemonset-log-collector", LogrotateTemplatePath, tp)
+		}
 
+		tp.CsiComponentName = controllerPlugin
 		rbdProvisionerDeployment, err = templateToDeployment("rbd-provisioner", RBDProvisionerDepTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
+		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&rbdProvisionerDeployment.Spec.Template, "csi-rbd-deployment-log-collector", LogrotateTemplatePath, tp)
 		}
 
 		// Create service if either liveness or GRPC metrics are enabled.
@@ -373,15 +398,25 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		})
 	}
 	if EnableCephFS {
+		tp.CsiComponentName = nodePlugin
+		tp.CsiLogRootPath = path.Join(csiRootPath, CephFSDriverName)
 		cephfsPlugin, err = templateToDaemonSet("cephfsplugin", CephFSPluginTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load CephFS plugin template")
 		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&cephfsPlugin.Spec.Template, "csi-cephfs-daemonset-log-collector", LogrotateTemplatePath, tp)
+		}
 
+		tp.CsiComponentName = controllerPlugin
 		cephfsProvisionerDeployment, err = templateToDeployment("cephfs-provisioner", CephFSProvisionerDepTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load rbd provisioner deployment template")
 		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&cephfsProvisionerDeployment.Spec.Template, "csi-cephfs-deployment-log-collector", LogrotateTemplatePath, tp)
+		}
+
 		// Create service if either liveness or GRPC metrics are enabled.
 		if CSIParam.EnableLiveness {
 			cephfsService, err = templateToService("cephfs-service", CephFSPluginServiceTemplatePath, tp)
@@ -401,15 +436,25 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 	}
 
 	if EnableNFS {
+		tp.CsiComponentName = nodePlugin
+		tp.CsiLogRootPath = path.Join(csiRootPath, NFSDriverName)
 		nfsPlugin, err = templateToDaemonSet("nfsplugin", NFSPluginTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load nfs plugin template")
 		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&nfsPlugin.Spec.Template, "csi-nfs-daemonset-log-collector", LogrotateTemplatePath, tp)
+		}
 
+		tp.CsiComponentName = controllerPlugin
 		nfsProvisionerDeployment, err = templateToDeployment("nfs-provisioner", NFSProvisionerDepTemplatePath, tp)
 		if err != nil {
 			return errors.Wrap(err, "failed to load nfs provisioner deployment template")
 		}
+		if tp.CSILogRotation {
+			applyLogrotateSidecar(&nfsProvisionerDeployment.Spec.Template, "csi-nfs-deployment-log-collector", LogrotateTemplatePath, tp)
+		}
+
 		enabledDrivers = append(enabledDrivers, driverDetails{
 			name:           NFSDriverShortName,
 			fullName:       NFSDriverName,
