@@ -16,7 +16,7 @@ replace (
 
 require (
 	github.com/IBM/keyprotect-go-client v0.14.3
-	github.com/aws/aws-sdk-go v1.54.19
+	github.com/aws/aws-sdk-go v1.54.20
 	github.com/banzaicloud/k8s-objectmatcher v1.8.0
 	github.com/ceph/go-ceph v0.28.0
 	github.com/coreos/pkg v0.0.0-20230601102743-20bbbf26f4d8
@@ -43,12 +43,12 @@ require (
 	golang.org/x/sync v0.7.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.30.2
-	k8s.io/apiextensions-apiserver v0.30.2
-	k8s.io/apimachinery v0.30.2
-	k8s.io/cli-runtime v0.30.2
-	k8s.io/client-go v0.30.2
-	k8s.io/cloud-provider v0.30.2
+	k8s.io/api v0.30.3
+	k8s.io/apiextensions-apiserver v0.30.3
+	k8s.io/apimachinery v0.30.3
+	k8s.io/cli-runtime v0.30.3
+	k8s.io/client-go v0.30.3
+	k8s.io/cloud-provider v0.30.3
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	sigs.k8s.io/controller-runtime v0.18.4
 	sigs.k8s.io/mcs-api v0.1.0

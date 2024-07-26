@@ -26,7 +26,7 @@ Settings can be specified at the global level to apply to the cluster as a whole
 * `external`:
     * `enable`: if `true`, the cluster will not be managed by Rook but via an external entity. This mode is intended to connect to an existing cluster. In this case, Rook will only consume the external cluster. However, Rook will be able to deploy various daemons in Kubernetes such as object gateways, mds and nfs if an image is provided and will refuse otherwise. If this setting is enabled **all** the other options will be ignored except `cephVersion.image` and `dataDirHostPath`. See [external cluster configuration](external-cluster/external-cluster.md). If `cephVersion.image` is left blank, Rook will refuse the creation of extra CRs like object, file and nfs.
 * `cephVersion`: The version information for launching the ceph daemons.
-    * `image`: The image used for running the ceph daemons. For example, `quay.io/ceph/ceph:v18.2.2`. For more details read the [container images section](#ceph-container-images).
+    * `image`: The image used for running the ceph daemons. For example, `quay.io/ceph/ceph:v18.2.4`. For more details read the [container images section](#ceph-container-images).
         For the latest ceph images, see the [Ceph DockerHub](https://hub.docker.com/r/ceph/ceph/tags/).
         To ensure a consistent version of the image is running across all nodes in the cluster, it is recommended to use a very specific image version.
         Tags also exist that would give the latest version, but they are only recommended for test environments. For example, the tag `v17` will be updated each time a new Quincy build is released.
@@ -80,6 +80,8 @@ For more details on the mons and when to choose a number other than `3`, see the
         `useAllNodes` must be set to `false` to use specific nodes and their config.
         See [node settings](#node-settings) below.
     * `config`: Config settings applied to all OSDs on the node unless overridden by `devices`. See the [config settings](#osd-configuration-settings) below.
+    * `allowDeviceClassUpdate`: Whether to allow changing the device class of an OSD after it is created. The default is false
+        to prevent unintentional data movement or CRUSH changes if the device class is changed accidentally.
     * [storage selection settings](#storage-selection-settings)
     * [Storage Class Device Sets](#storage-class-device-sets)
     * `onlyApplyOSDPlacement`: Whether the placement specific for OSDs is merged with the `all` placement. If `false`, the OSD placement will be merged with the `all` placement. If true, the `OSD placement will be applied` and the `all` placement will be ignored. The placement for OSDs is computed from several different places depending on the type of OSD:
@@ -114,8 +116,8 @@ These are general purpose Ceph container with all necessary daemons and dependen
 | -------------------- | --------------------------------------------------------- |
 | vRELNUM              | Latest release in this series (e.g., **v17** = Quincy)      |
 | vRELNUM.Y            | Latest stable release in this stable series (e.g., v17.2) |
-| vRELNUM.Y.Z          | A specific release (e.g., v18.2.2)                        |
-| vRELNUM.Y.Z-YYYYMMDD | A specific build (e.g., v18.2.2-20240311)                 |
+| vRELNUM.Y.Z          | A specific release (e.g., v18.2.4)                        |
+| vRELNUM.Y.Z-YYYYMMDD | A specific build (e.g., v18.2.4-20240724)                 |
 
 A specific will contain a specific release of Ceph as well as security fixes from the Operating System.
 
@@ -340,7 +342,7 @@ The following storage selection settings are specific to Ceph and do not apply t
 * `metadataDevice`: Name of a device, [partition](#limitations-of-metadata-device) or lvm to use for the metadata of OSDs on each node.  Performance can be improved by using a low latency device (such as SSD or NVMe) as the metadata device, while other spinning platter (HDD) devices on a node are used to store data. Provisioning will fail if the user specifies a `metadataDevice` but that device is not used as a metadata device by Ceph. Notably, `ceph-volume` will not use a device of the same device class (HDD, SSD, NVMe) as OSD devices for metadata, resulting in this failure.
 * `databaseSizeMB`:  The size in MB of a bluestore database. Include quotes around the size.
 * `walSizeMB`:  The size in MB of a bluestore write ahead log (WAL). Include quotes around the size.
-* `deviceClass`: The [CRUSH device class](https://ceph.io/community/new-luminous-crush-device-classes/) to use for this selection of storage devices. (By default, if a device's class has not already been set, OSDs will automatically set a device's class to either `hdd`, `ssd`, or `nvme`  based on the hardware properties exposed by the Linux kernel.) These storage classes can then be used to select the devices backing a storage pool by specifying them as the value of [the pool spec's `deviceClass` field](../Block-Storage/ceph-block-pool-crd.md#spec).
+* `deviceClass`: The [CRUSH device class](https://ceph.io/community/new-luminous-crush-device-classes/) to use for this selection of storage devices. (By default, if a device's class has not already been set, OSDs will automatically set a device's class to either `hdd`, `ssd`, or `nvme`  based on the hardware properties exposed by the Linux kernel.) These storage classes can then be used to select the devices backing a storage pool by specifying them as the value of [the pool spec's `deviceClass` field](../Block-Storage/ceph-block-pool-crd.md#spec). If updating the device class of an OSD after the OSD is already created, `allowDeviceClassUpdate: true` must be set. Otherwise updates to this `deviceClass` will be ignored.
 * `initialWeight`: The initial OSD weight in TiB units. By default, this value is derived from OSD's capacity.
 * `primaryAffinity`: The [primary-affinity](https://docs.ceph.com/en/latest/rados/operations/crush-map/#primary-affinity) value of an OSD, within range `[0, 1]` (default: `1`).
 * `osdsPerDevice`**: The number of OSDs to create on each device. High performance devices such as NVMe can handle running multiple OSDs. If desired, this can be overridden for each node and each device.
@@ -420,7 +422,7 @@ metadata:
   namespace: rook-ceph
 spec:
   cephVersion:
-    image: quay.io/ceph/ceph:v18.2.2
+    image: quay.io/ceph/ceph:v18.2.4
   dataDirHostPath: /var/lib/rook
   mon:
     count: 3
@@ -526,7 +528,7 @@ metadata:
   namespace: rook-ceph
 spec:
   cephVersion:
-    image: quay.io/ceph/ceph:v18.2.2
+    image: quay.io/ceph/ceph:v18.2.4
   dataDirHostPath: /var/lib/rook
   mon:
     count: 3
@@ -654,7 +656,7 @@ kubectl -n rook-ceph get CephCluster -o yaml
       deviceClasses:
       - name: hdd
     version:
-      image: quay.io/ceph/ceph:v18.2.2
+      image: quay.io/ceph/ceph:v18.2.4
       version: 16.2.6-0
     conditions:
     - lastHeartbeatTime: "2021-03-02T21:22:11Z"

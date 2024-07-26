@@ -1551,6 +1551,8 @@ spec:
               storage:
                 nullable: true
                 properties:
+                  allowDeviceClassUpdate:
+                    type: boolean
                   backfillFullRatio:
                     maximum: 1
                     minimum: 0
