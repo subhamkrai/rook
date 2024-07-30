@@ -449,6 +449,7 @@ spec:
                               - ""
                               - crush-compat
                               - upmap
+                              - read
                               - upmap-read
                               type: string
                           type: object
