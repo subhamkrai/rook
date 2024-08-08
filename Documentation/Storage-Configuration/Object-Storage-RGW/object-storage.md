@@ -50,7 +50,7 @@ spec:
       codingChunks: 1
   preservePoolsOnDelete: true
   gateway:
-    sslCertificateRef:
+    # sslCertificateRef:
     port: 80
     # securePort: 443
     instances: 1
@@ -159,7 +159,7 @@ spec:
     dataPoolName: rgw-data-pool
     preserveRadosNamespaceDataOnDelete: true
   gateway:
-    sslCertificateRef:
+    # sslCertificateRef:
     port: 80
     instances: 1
 ```
@@ -200,7 +200,7 @@ Then create a secret with the user credentials:
 kubectl -n rook-ceph create secret generic --type="kubernetes.io/rook" rgw-admin-ops-user --from-literal=accessKey=<access key of the user> --from-literal=secretKey=<secret key of the user>
 ```
 
-If you have an external `CephCluster` CR, you can instruct Rook to consume external gateways with the following:
+For an external CephCluster, configure Rook to consume external RGW servers with the following:
 
 ```yaml
 apiVersion: ceph.rook.io/v1
@@ -216,24 +216,35 @@ spec:
         # hostname: example.com
 ```
 
-Use the existing `object-external.yaml` file. Even though multiple endpoints can be specified, it is recommend to use only one endpoint. This endpoint is randomly added to `configmap` of OBC and secret of the `cephobjectstoreuser`. Rook never guarantees the randomly picked endpoint is a working one or not.
-If there are multiple endpoints, please add load balancer in front of them and use the load balancer endpoint in the `externalRgwEndpoints` list.
+See `object-external.yaml` for a more detailed example.
 
-When ready, the message in the `cephobjectstore` status similar to this one:
+Even though multiple `externalRgwEndpoints` can be specified, it is best to use a single endpoint.
+Only the first endpoint in the list will be advertised to any consuming resources like
+CephObjectStoreUsers, ObjectBucketClaims, or COSI resources. If there are multiple external RGW
+endpoints, add load balancer in front of them, then use the single load balancer endpoint in the
+`externalRgwEndpoints` list.
 
-```console
-kubectl -n rook-ceph get cephobjectstore external-store
-NAME                                 PHASE
-external-store                       Ready
+## Object store endpoint
 
-```
+The CephObjectStore resource `status.info` contains `endpoint` (and `secureEndpoint`) fields, which
+report the endpoint that can be used to access the object store as a client. This endpoint is also
+advertised as the default endpoint for CephObjectStoreUsers, ObjectBucketClaims, and
+Container Object Store Interface (COSI) resources.
 
-Any pod from your cluster can now access this endpoint:
+Each object store also creates a Kubernetes service that can be used as a client endpoint from
+within the Kubernetes cluster. The DNS name of the service is
+`rook-ceph-rgw-<objectStoreName>.<objectStoreNamespace>.svc`. This service DNS name is the default
+`endpoint` (and `secureEndpoint`).
 
-```console
-$ curl 10.100.28.138:8080
-<?xml version="1.0" encoding="UTF-8"?><ListAllMyBucketsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Owner><ID>anonymous</ID><DisplayName></DisplayName></Owner><Buckets></Buckets></ListAllMyBucketsResult>
-```
+For [external clusters](#connect-to-an-external-object-store), the default endpoint is the first
+`spec.gateway.externalRgwEndpoint` instead of the service DNS name.
+
+The advertised endpoint can be overridden using `advertiseEndpoint` in the
+[`spec.hosting` config](../../CRDs/Object-Storage/ceph-object-store-crd.md#hosting-settings).
+
+Rook always uses the advertised endpoint to perform management operations against the object store.
+When [TLS is enabled](#enable-tls), the TLS certificate must always specify the endpoint DNS name to
+allow secure management operations.
 
 ## Create a Bucket
 
@@ -488,6 +499,82 @@ To directly retrieve the secrets:
 ```console
 kubectl -n rook-ceph get secret rook-ceph-object-user-my-store-my-user -o jsonpath='{.data.AccessKey}' | base64 --decode
 kubectl -n rook-ceph get secret rook-ceph-object-user-my-store-my-user -o jsonpath='{.data.SecretKey}' | base64 --decode
+```
+
+## Enable TLS
+
+TLS is critical for securing object storage data access, and it is assumed as a default by many S3
+clients. TLS is enabled for CephObjectStores by configuring
+[`gateway` options](../../CRDs/Object-Storage/ceph-object-store-crd.md#gateway-settings).
+Set `securePort`, and give Rook access to a TLS certificate using `sslCertificateRef`.
+`caBundleRef` may be necessary as well to give the deployed gateway (RGW) access to the TLS
+certificate's CA signing bundle.
+
+Ceph RGW only supports a **single** TLS certificate. If the given TLS certificate is a concatenation
+of multiple certificates, only the first certificate will be used by the RGW as the server
+certificate. Therefore, the TLS certificate given must include all endpoints that clients will use
+for access as subject alternate names (SANs).
+
+The [CephObjectStore service endpoint](#object-store-endpoint) must be added as a SAN on the TLS
+certificate. If it is not possible to add the service DNS name as a SAN on the TLS certificate,
+set `hosting.advertiseEndpoint` to a TLS-approved endpoint to help ensure Rook and clients use
+secure data access.
+
+!!! note
+    OpenShift users can use add `service.beta.openshift.io/serving-cert-secret-name` as a service
+    annotation instead of using `sslCertificateRef`.
+
+## Virtual host-style Bucket Access
+
+The Ceph Object Gateway supports accessing buckets using
+[virtual host-style](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html)
+addressing, which allows addressing buckets using the bucket name as a subdomain in the endpoint.
+
+AWS has deprecated the the alternative path-style addressing mode which is Rook and Ceph's default.
+As a result, many end-user applications have begun to remove path-style support entirely. Many
+production clusters will have to enable virtual host-style address.
+
+Virtual host-style addressing requires 2 things:
+
+1. An endpoint that supports [wildcard addressing](https://en.wikipedia.org/wiki/Wildcard_DNS_record)
+2. CephObjectStore [hosting](../../CRDs/Object-Storage/ceph-object-store-crd.md#hosting-settings) configuration.
+
+Wildcard addressing can be configured in myriad ways. Some options:
+
+- Kubernetes [ingress loadbalancer](https://kubernetes.io/docs/concepts/services-networking/ingress/#hostname-wildcards)
+- Openshift [DNS operator](https://docs.openshift.com/container-platform/latest/networking/dns-operator.html)
+
+The minimum recommended `hosting` configuration is exemplified below. It is important to ensure that
+Rook advertises the wildcard-addressable endpoint as a priority over the default. TLS is also
+recommended for security, and the configured TLS certificate should specify the advertise endpoint.
+
+```yaml
+spec:
+  ...
+  hosting:
+    advertiseEndpoint:
+      dnsName: my.wildcard.addressable.endpoint.com
+      port: 443
+      useTls: true
+```
+
+A more complex `hosting` configuration is exemplified below. In this example, two
+wildcard-addressable endpoints are available. One is a wildcard-addressable ingress service that is
+accessible to clients outside of the Kubernetes cluster (`s3.ingress.domain.com`). The other is a
+wildcard-addressable Kubernetes cluster service (`s3.rook-ceph.svc`). The cluster service is the
+preferred advertise endpoint because the internal service avoids the possibility of the ingress
+service's router being a bottleneck for S3 client operations.
+
+```yaml
+spec:
+  ...
+  hosting:
+    advertiseEndpoint:
+      dnsName: s3.rook-ceph.svc
+      port: 443
+      useTls: true
+  dnsNames:
+    - s3.ingress.domain.com
 ```
 
 ## Object Multisite
