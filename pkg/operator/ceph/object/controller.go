@@ -405,7 +405,7 @@ func (r *ReconcileCephObjectStore) reconcileCreateObjectStore(cephObjectStore *c
 			}
 		}
 
-		if err := UpdateEndpointForAdminOps(objContext, cephObjectStore); err != nil {
+		if err := UpdateEndpoint(objContext, cephObjectStore); err != nil {
 			return r.setFailedStatus(k8sutil.ObservedGenerationNotAvailable, namespacedName, "failed to set endpoint", err)
 		}
 	} else {
@@ -437,7 +437,7 @@ func (r *ReconcileCephObjectStore) reconcileCreateObjectStore(cephObjectStore *c
 			return r.setFailedStatus(k8sutil.ObservedGenerationNotAvailable, namespacedName, "failed to reconcile service", err)
 		}
 
-		if err := UpdateEndpointForAdminOps(objContext, cephObjectStore); err != nil {
+		if err := UpdateEndpoint(objContext, cephObjectStore); err != nil {
 			return r.setFailedStatus(k8sutil.ObservedGenerationNotAvailable, namespacedName, "failed to set endpoint", err)
 		}
 
