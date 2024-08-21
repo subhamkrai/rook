@@ -251,6 +251,7 @@ spec:
 
 metadata:
   annotations:
+    capabilities: Seamless Upgrades
     tectonic-visibility: ocs
     repository: https://github.com/red-hat-storage/rook
     containerImage: rook/ceph:master
