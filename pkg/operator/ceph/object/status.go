@@ -18,7 +18,6 @@ package object
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
@@ -91,28 +90,15 @@ func updateStatus(ctx context.Context, observedGeneration int64, client client.C
 }
 
 func buildStatusInfo(cephObjectStore *cephv1.CephObjectStore) map[string]string {
-	nsName := fmt.Sprintf("%s/%s", cephObjectStore.Namespace, cephObjectStore.Name)
-
 	m := make(map[string]string)
 
-	advertiseEndpoint, err := cephObjectStore.GetAdvertiseEndpointUrl()
-	if err != nil {
-		// lots of validation happens before this point, so this should be nearly impossible
-		logger.Errorf("failed to get advertise endpoint for CephObjectStore %q to record on status; continuing without this. %v", nsName, err)
-	}
-
-	if cephObjectStore.AdvertiseEndpointIsSet() {
-		// if the advertise endpoint is explicitly set, it takes precedence as the only endpoint
-		m["endpoint"] = advertiseEndpoint
-		return m
-	}
-
-	if cephObjectStore.Spec.Gateway.Port != 0 && cephObjectStore.Spec.Gateway.SecurePort != 0 {
-		// by definition, advertiseEndpoint should prefer HTTPS, so the inverse arrangement doesn't apply
-		m["secureEndpoint"] = advertiseEndpoint
+	if cephObjectStore.Spec.Gateway.SecurePort != 0 && cephObjectStore.Spec.Gateway.Port != 0 {
+		m["secureEndpoint"] = BuildDNSEndpoint(GetStableDomainName(cephObjectStore), cephObjectStore.Spec.Gateway.SecurePort, true)
 		m["endpoint"] = BuildDNSEndpoint(GetStableDomainName(cephObjectStore), cephObjectStore.Spec.Gateway.Port, false)
+	} else if cephObjectStore.Spec.Gateway.SecurePort != 0 {
+		m["endpoint"] = BuildDNSEndpoint(GetStableDomainName(cephObjectStore), cephObjectStore.Spec.Gateway.SecurePort, true)
 	} else {
-		m["endpoint"] = advertiseEndpoint
+		m["endpoint"] = BuildDNSEndpoint(GetStableDomainName(cephObjectStore), cephObjectStore.Spec.Gateway.Port, false)
 	}
 
 	return m

@@ -19,6 +19,7 @@ package object
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -330,11 +331,39 @@ func EmptyPool(pool cephv1.PoolSpec) bool {
 	return reflect.DeepEqual(pool, cephv1.PoolSpec{})
 }
 
+// GetDomainName build the dns name to reach out the service endpoint
+func GetDomainName(s *cephv1.CephObjectStore) string {
+	return getDomainName(s, true)
+}
+
 func GetStableDomainName(s *cephv1.CephObjectStore) string {
-	if !s.Spec.IsExternal() {
-		return s.GetServiceDomainName()
+	return getDomainName(s, false)
+}
+
+func getDomainName(s *cephv1.CephObjectStore, returnRandomDomainIfMultiple bool) string {
+	endpoints := []string{}
+	if s.Spec.IsExternal() {
+		// if the store is external, pick a random endpoint to use. if the endpoint is down, this
+		// reconcile may fail, but a future reconcile will eventually pick a different endpoint to try
+		for _, e := range s.Spec.Gateway.ExternalRgwEndpoints {
+			endpoints = append(endpoints, e.String())
+		}
+	} else if s.Spec.Hosting != nil && len(s.Spec.Hosting.DNSNames) > 0 {
+		// if the store is internal and has DNS names, pick a random DNS name to use
+		endpoints = s.Spec.Hosting.DNSNames
+	} else {
+		return domainNameOfService(s)
 	}
-	return s.Spec.Gateway.ExternalRgwEndpoints[0].String()
+
+	idx := 0
+	if returnRandomDomainIfMultiple {
+		idx = rand.Intn(len(endpoints)) //nolint:gosec // G404: cryptographically weak RNG is fine here
+	}
+	return endpoints[idx]
+}
+
+func domainNameOfService(s *cephv1.CephObjectStore) string {
+	return fmt.Sprintf("%s-%s.%s.%s", AppName, s.Name, s.Namespace, svcDNSSuffix)
 }
 
 func getAllDomainNames(s *cephv1.CephObjectStore) []string {
@@ -347,9 +376,7 @@ func getAllDomainNames(s *cephv1.CephObjectStore) []string {
 		return domains
 	}
 
-	// do not return hosting.dnsNames in this list because Rook has no way of knowing for sure how
-	// they can be used. some might be TLS-only or non-TLS, or inaccessible from k8s
-	return []string{s.GetServiceDomainName()}
+	return []string{domainNameOfService(s)}
 }
 
 func getAllDNSEndpoints(s *cephv1.CephObjectStore, port int32, secure bool) []string {
