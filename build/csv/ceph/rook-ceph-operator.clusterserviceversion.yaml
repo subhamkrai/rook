@@ -2497,6 +2497,14 @@ spec:
                 - list
                 - watch
             - apiGroups:
+                - storage.k8s.io
+              resources:
+                - csinodes
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
                 - ""
               resources:
                 - persistentvolumes
@@ -2989,14 +2997,6 @@ spec:
                 - get
                 - list
                 - watch
-            - apiGroups:
-                - storage.k8s.io
-              resources:
-                - csinodes
-              verbs:
-                - get
-                - list
-                - watch
           serviceAccountName: rook-csi-rbd-provisioner-sa
         - rules:
             - verbs:
@@ -3157,7 +3157,7 @@ spec:
                             fieldPath: metadata.namespace
                       - name: ROOK_OBC_WATCH_OPERATOR_NAMESPACE
                         value: "true"
-                    image: docker.io/rook/ceph:v1.13.0.399.g9c0d795e2
+                    image: docker.io/rook/ceph:master
                     name: rook-ceph-operator
                     resources: {}
                     securityContext:
