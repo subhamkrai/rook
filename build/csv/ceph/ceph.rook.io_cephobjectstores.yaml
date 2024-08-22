@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   creationTimestamp: null
   name: cephobjectstores.ceph.rook.io
 spec:
@@ -43,6 +43,33 @@ spec:
                 items:
                   type: string
                 type: array
+              auth:
+                properties:
+                  keystone:
+                    nullable: true
+                    properties:
+                      acceptedRoles:
+                        items:
+                          type: string
+                        type: array
+                      implicitTenants:
+                        type: string
+                      revocationInterval:
+                        nullable: true
+                        type: integer
+                      serviceUserSecretName:
+                        type: string
+                      tokenCacheSize:
+                        nullable: true
+                        type: integer
+                      url:
+                        type: string
+                    required:
+                    - acceptedRoles
+                    - serviceUserSecretName
+                    - url
+                    type: object
+                type: object
               dataPool:
                 nullable: true
                 properties:
@@ -740,6 +767,8 @@ spec:
                           properties:
                             name:
                               type: string
+                            request:
+                              type: string
                           required:
                           - name
                           type: object
@@ -809,6 +838,7 @@ spec:
                                 format: int32
                                 type: integer
                               service:
+                                default: ""
                                 type: string
                             required:
                             - port
@@ -895,6 +925,7 @@ spec:
                                 format: int32
                                 type: integer
                               service:
+                                default: ""
                                 type: string
                             required:
                             - port
@@ -959,7 +990,26 @@ spec:
                     type: object
                 type: object
               hosting:
+                nullable: true
                 properties:
+                  advertiseEndpoint:
+                    nullable: true
+                    properties:
+                      dnsName:
+                        minLength: 1
+                        type: string
+                      port:
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      useTls:
+                        type: boolean
+                    required:
+                    - dnsName
+                    - port
+                    - useTls
+                    type: object
                   dnsNames:
                     items:
                       type: string
@@ -1097,6 +1147,32 @@ spec:
                 type: object
               preservePoolsOnDelete:
                 type: boolean
+              protocols:
+                properties:
+                  s3:
+                    nullable: true
+                    properties:
+                      authUseKeystone:
+                        nullable: true
+                        type: boolean
+                      enabled:
+                        nullable: true
+                        type: boolean
+                    type: object
+                  swift:
+                    nullable: true
+                    properties:
+                      accountInUrl:
+                        nullable: true
+                        type: boolean
+                      urlPrefix:
+                        nullable: true
+                        type: string
+                      versioningEnabled:
+                        nullable: true
+                        type: boolean
+                    type: object
+                type: object
               security:
                 nullable: true
                 properties:
