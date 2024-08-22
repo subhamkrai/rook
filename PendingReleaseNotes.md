@@ -24,3 +24,4 @@
 - Add option to specify prefix for the OBC provisioner.
 - Support Azure Key Vault for storing OSD encryption keys.
 - Separate image repository and tag values in the helm chart for the CSI images.
+- Allow updating the device class of OSDs, if `allowDeviceClassUpdate: true` is set

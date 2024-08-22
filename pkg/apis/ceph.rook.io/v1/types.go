@@ -2831,6 +2831,14 @@ type StorageScopeSpec struct {
 	// User needs to manually restart the OSD pod if they manage to fix the underlying OSD flapping issue before the restart interval.
 	// The sleep will be disabled if this interval is set to 0.
 	FlappingRestartIntervalHours int `json:"flappingRestartIntervalHours"`
+	// Whether to allow updating the device class after the OSD is initially provisioned
+	// +optional
+	AllowDeviceClassUpdate bool `json:"allowDeviceClassUpdate,omitempty"`
+	// Whether Rook will resize the OSD CRUSH weight when the OSD PVC size is increased.
+	// This allows cluster data to be rebalanced to make most effective use of new OSD space.
+	// The default is false since data rebalancing can cause temporary cluster slowdown.
+	// +optional
+	AllowOsdCrushWeightUpdate bool `json:"allowOsdCrushWeightUpdate,omitempty"`
 }
 
 // OSDStore is the backend storage type used for creating the OSDs

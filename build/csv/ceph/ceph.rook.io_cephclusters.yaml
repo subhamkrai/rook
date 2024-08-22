@@ -1492,6 +1492,10 @@ spec:
               storage:
                 nullable: true
                 properties:
+                  allowDeviceClassUpdate:
+                    type: boolean
+                  allowOsdCrushWeightUpdate:
+                    type: boolean
                   config:
                     additionalProperties:
                       type: string
