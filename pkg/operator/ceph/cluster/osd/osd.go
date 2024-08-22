@@ -325,6 +325,8 @@ func (c *Cluster) postReconcileUpdateOSDProperties(desiredOSDs map[int]*OSDInfo)
 	}
 	logger.Debugf("post processing osd properties with %d actual osds from ceph osd df and %d existing osds found during reconcile", len(osdUsage.OSDNodes), len(desiredOSDs))
 	for _, actualOSD := range osdUsage.OSDNodes {
+		// setting this true for 4.16 downstream, from 4.17 ocs operator will set this to true
+		c.spec.Storage.AllowDeviceClassUpdate = true
 		if c.spec.Storage.AllowOsdCrushWeightUpdate {
 			_, err := cephclient.ResizeOsdCrushWeight(actualOSD, c.context, c.clusterInfo)
 			if err != nil {
