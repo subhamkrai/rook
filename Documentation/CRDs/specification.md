@@ -1847,6 +1847,34 @@ GatewaySpec
 </tr>
 <tr>
 <td>
+<code>protocols</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ProtocolSpec">
+ProtocolSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The protocol specification</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.AuthSpec">
+AuthSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The authentication configuration</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>zone</code><br/>
 <em>
 <a href="#ceph.rook.io/v1.ZoneSpec">
@@ -1915,7 +1943,9 @@ ObjectStoreHostingSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>Hosting settings for the object store</p>
+<p>Hosting settings for the object store.
+A common use case for hosting configuration is to inform Rook of endpoints that support DNS
+wildcards, which in turn allows virtual host-style bucket addressing.</p>
 </td>
 </tr>
 </table>
@@ -2609,6 +2639,38 @@ CIDRList
 <div>
 <p>AnnotationsSpec is the main spec annotation for all daemons</p>
 </div>
+<h3 id="ceph.rook.io/v1.AuthSpec">AuthSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreSpec">ObjectStoreSpec</a>)
+</p>
+<div>
+<p>AuthSpec represents the authentication protocol configuration of a Ceph Object Store Gateway</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>keystone</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.KeystoneSpec">
+KeystoneSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The spec for Keystone</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.BucketNotificationEvent">BucketNotificationEvent
 (<code>string</code> alias)</h3>
 <p>
@@ -7068,6 +7130,32 @@ string
 </td>
 </tr></tbody>
 </table>
+<h3 id="ceph.rook.io/v1.ImplicitTenantSetting">ImplicitTenantSetting
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.KeystoneSpec">KeystoneSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;&#34;</p></td>
+<td></td>
+</tr><tr><td><p>&#34;false&#34;</p></td>
+<td></td>
+</tr><tr><td><p>&#34;s3&#34;</p></td>
+<td></td>
+</tr><tr><td><p>&#34;swift&#34;</p></td>
+<td></td>
+</tr><tr><td><p>&#34;true&#34;</p></td>
+<td></td>
+</tr></tbody>
+</table>
 <h3 id="ceph.rook.io/v1.KafkaEndpointSpec">KafkaEndpointSpec
 </h3>
 <p>
@@ -7394,6 +7482,8 @@ string
 <td></td>
 </tr><tr><td><p>&#34;clusterMetadata&#34;</p></td>
 <td></td>
+</tr><tr><td><p>&#34;cmdreporter&#34;</p></td>
+<td></td>
 </tr><tr><td><p>&#34;crashcollector&#34;</p></td>
 <td></td>
 </tr><tr><td><p>&#34;dashboard&#34;</p></td>
@@ -7417,6 +7507,95 @@ string
 </tr><tr><td><p>&#34;keyrotation&#34;</p></td>
 <td></td>
 </tr></tbody>
+</table>
+<h3 id="ceph.rook.io/v1.KeystoneSpec">KeystoneSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.AuthSpec">AuthSpec</a>)
+</p>
+<div>
+<p>KeystoneSpec represents the Keystone authentication configuration of a Ceph Object Store Gateway</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>url</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The URL for the Keystone server.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceUserSecretName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The name of the secret containing the credentials for the service user account used by RGW. It has to be in the same namespace as the object store resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>acceptedRoles</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>The roles requires to serve requests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>implicitTenants</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ImplicitTenantSetting">
+ImplicitTenantSetting
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Create new users in their own tenants of the same name. Possible values are true, false, swift and s3. The latter have the effect of splitting the identity space such that only the indicated protocol will use implicit tenants.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tokenCacheSize</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The maximum number of entries in each Keystone token cache.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>revocationInterval</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The number of seconds between token revocation checks.</p>
+</td>
+</tr>
+</tbody>
 </table>
 <h3 id="ceph.rook.io/v1.Labels">Labels
 (<code>map[string]string</code> alias)</h3>
@@ -8977,6 +9156,60 @@ and prepares same OSD on that disk</p>
 </tr>
 </tbody>
 </table>
+<h3 id="ceph.rook.io/v1.ObjectEndpointSpec">ObjectEndpointSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreHostingSpec">ObjectStoreHostingSpec</a>)
+</p>
+<div>
+<p>ObjectEndpointSpec represents an object store endpoint</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>dnsName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>DnsName is the DNS name (in RFC-1123 format) of the endpoint.
+If the DNS name corresponds to an endpoint with DNS wildcard support, do not include the
+wildcard itself in the list of hostnames.
+E.g., use &ldquo;mystore.example.com&rdquo; instead of &ldquo;*.mystore.example.com&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Port is the port on which S3 connections can be made for this endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>useTls</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>UseTls defines whether the endpoint uses TLS (HTTPS) or not (HTTP).</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.ObjectEndpoints">ObjectEndpoints
 </h3>
 <p>
@@ -9160,6 +9393,24 @@ bool
 <tbody>
 <tr>
 <td>
+<code>advertiseEndpoint</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ObjectEndpointSpec">
+ObjectEndpointSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdvertiseEndpoint is the default endpoint Rook will return for resources dependent on this
+object store. This endpoint will be returned to CephObjectStoreUsers, Object Bucket Claims,
+and COSI Buckets/Accesses.
+By default, Rook returns the endpoint for the object store&rsquo;s Kubernetes service using HTTPS
+with <code>gateway.securePort</code> if it is defined (otherwise, HTTP with <code>gateway.port</code>).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>dnsNames</code><br/>
 <em>
 []string
@@ -9167,11 +9418,15 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>A list of DNS names in which bucket can be accessed via virtual host path. These names need to valid according RFC-1123.
-Each domain requires wildcard support like ingress loadbalancer.
-Do not include the wildcard itself in the list of hostnames (e.g. use &ldquo;mystore.example.com&rdquo; instead of &ldquo;*.mystore.example.com&rdquo;).
-Add all hostnames including user-created Kubernetes Service endpoints to the list.
-CephObjectStore Service Endpoints and CephObjectZone customEndpoints are automatically added to the list.
+<p>A list of DNS host names on which object store gateways will accept client S3 connections.
+When specified, object store gateways will reject client S3 connections to hostnames that are
+not present in this list, so include all endpoints.
+The object store&rsquo;s advertiseEndpoint and Kubernetes service endpoint, plus CephObjectZone
+<code>customEndpoints</code> are automatically added to the list but may be set here again if desired.
+Each DNS name must be valid according RFC-1123.
+If the DNS name corresponds to an endpoint with DNS wildcard support, do not include the
+wildcard itself in the list of hostnames.
+E.g., use &ldquo;mystore.example.com&rdquo; instead of &ldquo;*.mystore.example.com&rdquo;.
 The feature is supported only for Ceph v18 and later versions.</p>
 </td>
 </tr>
@@ -9308,6 +9563,34 @@ GatewaySpec
 </tr>
 <tr>
 <td>
+<code>protocols</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ProtocolSpec">
+ProtocolSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The protocol specification</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auth</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.AuthSpec">
+AuthSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The authentication configuration</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>zone</code><br/>
 <em>
 <a href="#ceph.rook.io/v1.ZoneSpec">
@@ -9376,7 +9659,9 @@ ObjectStoreHostingSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>Hosting settings for the object store</p>
+<p>Hosting settings for the object store.
+A common use case for hosting configuration is to inform Rook of endpoints that support DNS
+wildcards, which in turn allows virtual host-style bucket addressing.</p>
 </td>
 </tr>
 </tbody>
@@ -10660,6 +10945,52 @@ alive or ready to receive traffic.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="ceph.rook.io/v1.ProtocolSpec">ProtocolSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreSpec">ObjectStoreSpec</a>)
+</p>
+<div>
+<p>ProtocolSpec represents a Ceph Object Store protocol specification</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>s3</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.S3Spec">
+S3Spec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The spec for S3</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>swift</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.SwiftSpec">
+SwiftSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The spec for Swift</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.PullSpec">PullSpec
 </h3>
 <p>
@@ -11030,6 +11361,48 @@ HybridStorageSpec
 <div>
 <p>ResourceSpec is a collection of ResourceRequirements that describes the compute resource requirements</p>
 </div>
+<h3 id="ceph.rook.io/v1.S3Spec">S3Spec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ProtocolSpec">ProtocolSpec</a>)
+</p>
+<div>
+<p>S3Spec represents Ceph Object Store specification for the S3 API</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether to enable S3. This defaults to true (even if protocols.s3 is not present in the CRD). This maintains backwards compatibility – by default S3 is enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>authUseKeystone</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether to use Keystone for authentication. This option maps directly to the rgw_s3_auth_use_keystone option. Enabling it allows generating S3 credentials via an OpenStack API call, see the docs. If not given, the defaults of the corresponding RGW option apply.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.SSSDSidecar">SSSDSidecar
 </h3>
 <p>
@@ -12230,6 +12603,20 @@ bool
 <p>Whether to allow updating the device class after the OSD is initially provisioned</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>allowOsdCrushWeightUpdate</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether Rook will resize the OSD CRUSH weight when the OSD PVC size is increased.
+This allows cluster data to be rebalanced to make most effective use of new OSD space.
+The default is false since data rebalancing can cause temporary cluster slowdown.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ceph.rook.io/v1.StoreType">StoreType
@@ -12303,6 +12690,60 @@ string
 <td>
 <em>(Optional)</em>
 <p>Zones is the list of zones</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ceph.rook.io/v1.SwiftSpec">SwiftSpec
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ProtocolSpec">ProtocolSpec</a>)
+</p>
+<div>
+<p>SwiftSpec represents Ceph Object Store specification for the Swift API</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>accountInUrl</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether or not the Swift account name should be included in the Swift API URL. If set to false (the default), then the Swift API will listen on a URL formed like <a href="http://host:port/">http://host:port/</a><rgw_swift_url_prefix>/v1. If set to true, the Swift API URL will be <a href="http://host:port/">http://host:port/</a><rgw_swift_url_prefix>/v1/AUTH_<account_name>. You must set this option to true (and update the Keystone service catalog) if you want radosgw to support publicly-readable containers and temporary URLs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>urlPrefix</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The URL prefix for the Swift API, to distinguish it from the S3 API endpoint. The default is swift, which makes the Swift API available at the URL <a href="http://host:port/swift/v1">http://host:port/swift/v1</a> (or <a href="http://host:port/swift/v1/AUTH_%(tenant_id)s">http://host:port/swift/v1/AUTH_%(tenant_id)s</a> if rgw swift account in url is enabled).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>versioningEnabled</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enables the Object Versioning of OpenStack Object Storage API. This allows clients to put the X-Versions-Location attribute on containers that should be versioned.</p>
 </td>
 </tr>
 </tbody>
@@ -12580,7 +13021,7 @@ If the resource referred to by volumeAttributesClass does not exist, this Persis
 set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
 exists.
 More info: <a href="https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/">https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/</a>
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.</p>
+(Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).</p>
 </td>
 </tr>
 </table>

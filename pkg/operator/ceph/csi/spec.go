@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/telemetry"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
 	"github.com/rook/rook/pkg/operator/k8sutil"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 
+	csiopv1a1 "github.com/ceph/ceph-csi-operator/api/v1alpha1"
 	cephcsi "github.com/ceph/ceph-csi/api/deploy/kubernetes"
 )
 
@@ -129,6 +131,7 @@ var (
 	EnableRBD                 = false
 	EnableCephFS              = false
 	EnableNFS                 = false
+	enableCSIOperator         = false
 	AllowUnsupported          = false
 	CustomCSICephConfigExists = false
 
@@ -148,13 +151,13 @@ var (
 // manually challenging.
 var (
 	// image names
-	DefaultCSIPluginImage   = "quay.io/cephcsi/cephcsi:v3.11.0"
-	DefaultRegistrarImage   = "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.10.1"
-	DefaultProvisionerImage = "registry.k8s.io/sig-storage/csi-provisioner:v4.0.1"
-	DefaultAttacherImage    = "registry.k8s.io/sig-storage/csi-attacher:v4.5.1"
-	DefaultSnapshotterImage = "registry.k8s.io/sig-storage/csi-snapshotter:v7.0.2"
-	DefaultResizerImage     = "registry.k8s.io/sig-storage/csi-resizer:v1.10.1"
-	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.8.0"
+	DefaultCSIPluginImage   = "quay.io/cephcsi/cephcsi:v3.12.0"
+	DefaultRegistrarImage   = "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.11.1"
+	DefaultProvisionerImage = "registry.k8s.io/sig-storage/csi-provisioner:v5.0.1"
+	DefaultAttacherImage    = "registry.k8s.io/sig-storage/csi-attacher:v4.6.1"
+	DefaultSnapshotterImage = "registry.k8s.io/sig-storage/csi-snapshotter:v8.0.1"
+	DefaultResizerImage     = "registry.k8s.io/sig-storage/csi-resizer:v1.11.1"
+	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.9.0"
 
 	// image pull policy
 	DefaultCSIImagePullPolicy = string(corev1.PullIfNotPresent)
@@ -726,8 +729,8 @@ func (r *ReconcileCSI) stopDrivers(ver *version.Info) error {
 	CephFSDriverName = fmt.Sprintf("%s.cephfs.csi.ceph.com", r.opConfig.OperatorNamespace)
 	NFSDriverName = fmt.Sprintf("%s.nfs.csi.ceph.com", r.opConfig.OperatorNamespace)
 
-	if !EnableRBD {
-		logger.Info("CSI Ceph RBD driver disabled")
+	if !EnableRBD || EnableCSIOperator() {
+		logger.Debugf("either EnableRBD if `false` or EnableCSIOperator is `true`, `EnableRBD is %t` and `EnableCSIOperator is %t", EnableRBD, EnableCSIOperator())
 		err := r.deleteCSIDriverResources(ver, CsiRBDPlugin, csiRBDProvisioner, "csi-rbdplugin-metrics", RBDDriverName)
 		if err != nil {
 			return errors.Wrap(err, "failed to remove CSI Ceph RBD driver")
@@ -735,8 +738,8 @@ func (r *ReconcileCSI) stopDrivers(ver *version.Info) error {
 		logger.Info("successfully removed CSI Ceph RBD driver")
 	}
 
-	if !EnableCephFS {
-		logger.Info("CSI CephFS driver disabled")
+	if !EnableCephFS || EnableCSIOperator() {
+		logger.Debugf("either EnableCephFS if `false` or EnableCSIOperator is `true`, `EnableCephFS is %t` and `EnableCSIOperator is %t", EnableRBD, EnableCSIOperator())
 		err := r.deleteCSIDriverResources(ver, CsiCephFSPlugin, csiCephFSProvisioner, "csi-cephfsplugin-metrics", CephFSDriverName)
 		if err != nil {
 			return errors.Wrap(err, "failed to remove CSI CephFS driver")
@@ -744,8 +747,8 @@ func (r *ReconcileCSI) stopDrivers(ver *version.Info) error {
 		logger.Info("successfully removed CSI CephFS driver")
 	}
 
-	if !EnableNFS {
-		logger.Info("CSI NFS driver disabled")
+	if !EnableNFS || EnableCSIOperator() {
+		logger.Debugf("either EnableNFS if `false` or EnableCSIOperator is `true`, `EnableNFS is %t` and `EnableCSIOperator is %t", EnableRBD, EnableCSIOperator())
 		err := r.deleteCSIDriverResources(ver, CsiNFSPlugin, csiNFSProvisioner, "csi-nfsplugin-metrics", NFSDriverName)
 		if err != nil {
 			return errors.Wrap(err, "failed to remove CSI NFS driver")
@@ -754,6 +757,48 @@ func (r *ReconcileCSI) stopDrivers(ver *version.Info) error {
 	}
 
 	return nil
+}
+
+func (r *ReconcileCSI) deleteCSIOperatorResources(clusterNamespace string, deleteOp bool) {
+	csiCephConnection := &csiopv1a1.CephConnection{}
+
+	err := r.client.DeleteAllOf(r.opManagerContext, csiCephConnection, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{Namespace: clusterNamespace}})
+	if err != nil && !kerrors.IsNotFound(err) {
+		logger.Errorf("failed to delete CSI-operator Ceph Connection %q. %v", csiCephConnection.Name, err)
+	} else {
+		logger.Infof("deleted CSI-operator Ceph Connection %q", csiCephConnection.Name)
+	}
+
+	csiOpClientProfile := &csiopv1a1.ClientProfile{}
+	err = r.client.DeleteAllOf(r.opManagerContext, csiOpClientProfile, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{Namespace: clusterNamespace}})
+	if err != nil && !kerrors.IsNotFound(err) {
+		logger.Errorf("failed to delete CSI-operator client profile %q. %v", csiOpClientProfile.Name, err)
+	} else {
+		logger.Infof("deleted CSI-operator client profile %q", csiOpClientProfile.Name)
+	}
+
+	err = r.deleteImageSetConfigMap()
+	if err != nil && !kerrors.IsNotFound(err) {
+		logger.Error("failed to delete imageSetConfigMap", err)
+	}
+
+	if deleteOp {
+		csiDriver := &csiopv1a1.Driver{}
+		err = r.client.DeleteAllOf(r.opManagerContext, csiDriver, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{Namespace: r.opConfig.OperatorNamespace}})
+		if err != nil && !kerrors.IsNotFound(err) {
+			logger.Errorf("failed to delete CSI-operator driver config %q. %v", csiDriver.Name, err)
+		} else {
+			logger.Infof("deleted CSI-operator driver config %q", csiDriver.Name)
+		}
+
+		opConfig := &csiopv1a1.OperatorConfig{}
+		err = r.client.DeleteAllOf(r.opManagerContext, opConfig, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{Namespace: r.opConfig.OperatorNamespace}})
+		if err != nil && !kerrors.IsNotFound(err) {
+			logger.Errorf("failed to delete CSI-operator operator config %q. %v", opConfig.Name, err)
+		} else {
+			logger.Infof("deleted CSI-operator operator config %q", opConfig.Name)
+		}
+	}
 }
 
 func (r *ReconcileCSI) deleteCSIDriverResources(ver *version.Info, daemonset, deployment, service, driverName string) error {
@@ -773,10 +818,13 @@ func (r *ReconcileCSI) deleteCSIDriverResources(ver *version.Info, daemonset, de
 		return errors.Wrapf(err, "failed to delete the %q", service)
 	}
 
-	err = csiDriverobj.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, driverName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to delete %q Driver Info", driverName)
+	if !EnableCSIOperator() {
+		err = csiDriverobj.deleteCSIDriverInfo(r.opManagerContext, r.context.Clientset, driverName)
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete %q Driver Info", driverName)
+		}
 	}
+
 	return nil
 }
 
@@ -826,6 +874,10 @@ func (r *ReconcileCSI) validateCSIVersion(ownerInfo *k8sutil.OwnerInfo) (*CephCS
 	job.Spec.Template.Spec.Tolerations = getToleration(r.opConfig.Parameters, provisionerTolerationsEnv, []corev1.Toleration{})
 	job.Spec.Template.Spec.Affinity = &corev1.Affinity{
 		NodeAffinity: getNodeAffinity(r.opConfig.Parameters, provisionerNodeAffinityEnv, &corev1.NodeAffinity{}),
+	}
+	if r.firstCephCluster != nil {
+		cephv1.GetCmdReporterAnnotations(r.firstCephCluster.Annotations).ApplyToObjectMeta(&job.Spec.Template.ObjectMeta)
+		cephv1.GetCmdReporterLabels(r.firstCephCluster.Labels).ApplyToObjectMeta(&job.Spec.Template.ObjectMeta)
 	}
 
 	stdout, _, retcode, err := versionReporter.Run(r.opManagerContext, timeout)
@@ -1091,4 +1143,8 @@ func getPrefixFromArg(arg string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func EnableCSIOperator() bool {
+	return enableCSIOperator && !IsHolderEnabled()
 }

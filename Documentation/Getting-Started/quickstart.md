@@ -12,7 +12,7 @@ This guide will walk through the basic setup of a Ceph cluster and enable K8s ap
 
 ## Kubernetes Version
 
-Kubernetes versions **v1.25** through **v1.30** are supported.
+Kubernetes versions **v1.26** through **v1.31** are supported.
 
 ## CPU Architecture
 
@@ -36,7 +36,7 @@ To configure the Ceph storage cluster, at least one of these local storage optio
 A simple Rook cluster is created for Kubernetes with the following `kubectl` commands and [example manifests](https://github.com/rook/rook/blob/master/deploy/examples).
 
 ```console
-$ git clone --single-branch --branch master https://github.com/rook/rook.git
+$ git clone --single-branch --branch v1.15.0 https://github.com/rook/rook.git
 cd rook/deploy/examples
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml
 kubectl create -f cluster.yaml
