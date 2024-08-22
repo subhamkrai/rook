@@ -2397,6 +2397,50 @@ spec:
                 - customresourcedefinitions
               verbs:
                 - get
+            - apiGroups:
+                - csi.ceph.io
+              resources:
+                - cephconnections
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - csi.ceph.io
+              resources:
+                - clientprofiles
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - csi.ceph.io
+              resources:
+                - operatorconfigs
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - update
+                - watch
+            - apiGroups:
+                - csi.ceph.io
+              resources:
+                - drivers
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - update
+                - watch
           serviceAccountName: rook-ceph-system
         - rules:
             - apiGroups:
@@ -2448,6 +2492,14 @@ spec:
                 - ""
               resources:
                 - nodes
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - storage.k8s.io
+              resources:
+                - csinodes
               verbs:
                 - get
                 - list
@@ -2945,14 +2997,6 @@ spec:
                 - get
                 - list
                 - watch
-            - apiGroups:
-                - storage.k8s.io
-              resources:
-                - csinodes
-              verbs:
-                - get
-                - list
-                - watch
           serviceAccountName: rook-csi-rbd-provisioner-sa
         - rules:
             - verbs:
@@ -3113,7 +3157,7 @@ spec:
                             fieldPath: metadata.namespace
                       - name: ROOK_OBC_WATCH_OPERATOR_NAMESPACE
                         value: "true"
-                    image: docker.io/rook/ceph:v1.13.0.399.g9c0d795e2
+                    image: docker.io/rook/ceph:v1.15.0
                     name: rook-ceph-operator
                     resources: {}
                     securityContext:
