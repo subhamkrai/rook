@@ -73,8 +73,8 @@ function generate_csv() {
         return
     fi
 
-    sed -i "s|containerImage: rook/ceph:.*|containerImage: $ROOK_IMAGE|" "$CSV_FILE_NAME"
-    sed -i "s|image: rook/ceph:.*|image: $ROOK_IMAGE|" "$CSV_FILE_NAME"
+    sed -i "s|containerImage: .*/rook/ceph:.*|containerImage: $ROOK_IMAGE|" "$CSV_FILE_NAME"
+    sed -i "s|image: .*/rook/ceph:.*|image: $ROOK_IMAGE|" "$CSV_FILE_NAME"
     sed -i "s/name: rook-ceph.v.*/name: rook-ceph-operator.v$CSV_VERSION/g" "$CSV_FILE_NAME"
     sed -i "s/version: 0.0.0/version: $CSV_VERSION/g" "$CSV_FILE_NAME"
 

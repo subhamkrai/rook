@@ -232,7 +232,7 @@ spec:
     - type: AllNamespaces
       supported: false
   relatedImages:
-    - image: rook/ceph:master
+    - image: docker.io/rook/ceph:master
       name: rook-container
     - image: quay.io/csiaddons/k8s-sidecar:v0.8.0
       name: csiaddons-sidecar
@@ -254,7 +254,7 @@ metadata:
     capabilities: Seamless Upgrades
     tectonic-visibility: ocs
     repository: https://github.com/red-hat-storage/rook
-    containerImage: rook/ceph:master
+    containerImage: docker.io/rook/ceph:master
     operators.operatorframework.io/operator-type: non-standalone
     alm-examples: |-
       [
