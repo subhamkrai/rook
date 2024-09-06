@@ -157,7 +157,7 @@ var (
 	DefaultAttacherImage    = "registry.k8s.io/sig-storage/csi-attacher:v4.6.1"
 	DefaultSnapshotterImage = "registry.k8s.io/sig-storage/csi-snapshotter:v8.0.1"
 	DefaultResizerImage     = "registry.k8s.io/sig-storage/csi-resizer:v1.11.1"
-	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.9.0"
+	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.9.1"
 
 	// image pull policy
 	DefaultCSIImagePullPolicy = string(corev1.PullIfNotPresent)
@@ -382,6 +382,7 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		if tp.CSILogRotation {
 			applyLogrotateSidecar(&rbdProvisionerDeployment.Spec.Template, "csi-rbd-deployment-log-collector", LogrotateTemplatePath, tp)
 		}
+		rbdProvisionerDeployment.Spec.Template.Spec.HostNetwork = opcontroller.EnforceHostNetwork()
 
 		// Create service if either liveness or GRPC metrics are enabled.
 		if CSIParam.EnableLiveness {
@@ -419,6 +420,7 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		if tp.CSILogRotation {
 			applyLogrotateSidecar(&cephfsProvisionerDeployment.Spec.Template, "csi-cephfs-deployment-log-collector", LogrotateTemplatePath, tp)
 		}
+		cephfsProvisionerDeployment.Spec.Template.Spec.HostNetwork = opcontroller.EnforceHostNetwork()
 
 		// Create service if either liveness or GRPC metrics are enabled.
 		if CSIParam.EnableLiveness {
@@ -457,6 +459,7 @@ func (r *ReconcileCSI) startDrivers(ver *version.Info, ownerInfo *k8sutil.OwnerI
 		if tp.CSILogRotation {
 			applyLogrotateSidecar(&nfsProvisionerDeployment.Spec.Template, "csi-nfs-deployment-log-collector", LogrotateTemplatePath, tp)
 		}
+		nfsProvisionerDeployment.Spec.Template.Spec.HostNetwork = opcontroller.EnforceHostNetwork()
 
 		enabledDrivers = append(enabledDrivers, driverDetails{
 			name:           NFSDriverShortName,
