@@ -10,6 +10,7 @@ CRD_ERR="changes found by 'make crds'. please run 'make crds' locally and update
 BUILD_ERR="changes found by make build', please commit your go.sum or other changed files"
 HELM_ERR="changes found by 'make gen-rbac'. please run 'make gen-rbac' locally and update your PR"
 CSV_ERR="changes found by make gen-csv',please run 'make gen-csv' locally and update your PR"
+DOCS_ERR="changes found by 'make docs'. please run 'make docs' locally and update your PR"
 
 #############
 # FUNCTIONS #
@@ -30,6 +31,9 @@ function validate() {
 # MAIN #
 ########
 case "$1" in
+docs)
+  validate "$DOCS_ERR"
+  ;;
 codegen)
   validate "$CODEGEN_ERR"
   ;;
@@ -49,7 +53,7 @@ gen-csv)
   validate "$CSV_ERR"
   ;;
 *)
-  echo $"Usage: $0 {codegen|modcheck|crd|build|gen-rbac}"
+  echo $"Usage: $0 {docs|codegen|modcheck|crd|build|gen-rbac}"
   exit 1
   ;;
 esac
