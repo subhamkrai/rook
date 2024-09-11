@@ -314,11 +314,44 @@ spec:
                     x-kubernetes-validations:
                     - message: object store shared metadata pool is immutable
                       rule: self == oldSelf
+                  poolPlacements:
+                    items:
+                      properties:
+                        dataNonECPoolName:
+                          type: string
+                        dataPoolName:
+                          minLength: 1
+                          type: string
+                        metadataPoolName:
+                          minLength: 1
+                          type: string
+                        name:
+                          minLength: 1
+                          pattern: ^[a-zA-Z0-9._/-]+$
+                          type: string
+                        storageClasses:
+                          items:
+                            properties:
+                              dataPoolName:
+                                minLength: 1
+                                type: string
+                              name:
+                                minLength: 1
+                                pattern: ^[a-zA-Z0-9._/-]+$
+                                type: string
+                            required:
+                            - dataPoolName
+                            - name
+                            type: object
+                          type: array
+                      required:
+                      - dataPoolName
+                      - metadataPoolName
+                      - name
+                      type: object
+                    type: array
                   preserveRadosNamespaceDataOnDelete:
                     type: boolean
-                required:
-                - dataPoolName
-                - metadataPoolName
                 type: object
               zoneGroup:
                 type: string
