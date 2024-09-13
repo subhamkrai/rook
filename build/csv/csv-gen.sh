@@ -16,6 +16,7 @@ YQ_CMD_MERGE_OVERWRITE=("$yq" merge --inplace --overwrite --prettyPrint)
 YQ_CMD_MERGE=("$yq" merge --arrays=append --inplace)
 YQ_CMD_WRITE=("$yq" write --inplace -P)
 CSV_FILE_NAME="../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-operator.clusterserviceversion.yaml"
+EXTERNAL_CLUSTER_SCRIPT_CONFIGMAP="../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-external-cluster-script-config_v1_configmap.yaml"
 CEPH_EXTERNAL_SCRIPT_FILE="../../deploy/examples/create-external-cluster-resources.py"
 ASSEMBLE_FILE_COMMON="../../deploy/olm/assemble/metadata-common.yaml"
 ASSEMBLE_FILE_OCP="../../deploy/olm/assemble/metadata-ocp.yaml"
@@ -65,6 +66,9 @@ function generate_csv() {
 
     # We don't need to include these files in csv as ocs-operator creates its own.
     rm -rf "../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-operator-config_v1_configmap.yaml"
+
+    # Update the "create-external-resources.py" script value in external-cluster-script-configmap
+    "${YQ_CMD_WRITE[@]}" "$EXTERNAL_CLUSTER_SCRIPT_CONFIGMAP" data.script "$(base64 <$CEPH_EXTERNAL_SCRIPT_FILE)"
 
     # This change are just to make the CSV file as it was earlier and as ocs-operator reads.
     # Skipping this change for darwin since `sed -i` doesn't work with darwin properly.
