@@ -843,6 +843,17 @@ spec:
                 properties:
                   enabled:
                     type: boolean
+                  exporter:
+                    properties:
+                      perfCountersPrioLimit:
+                        default: 5
+                        format: int64
+                        type: integer
+                      statsPeriodSeconds:
+                        default: 5
+                        format: int64
+                        type: integer
+                    type: object
                   externalMgrEndpoints:
                     items:
                       properties:
