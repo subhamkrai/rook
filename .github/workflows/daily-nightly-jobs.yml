@@ -1,8 +1,8 @@
 name: Daily nightly jobs
 on:
-  pull_request:
-    branches:
-      - master
+  schedule:
+    - cron: "0 0 * * *" # every day at midnight
+  workflow_dispatch: {}
 
 defaults:
   run:
