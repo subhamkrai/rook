@@ -356,8 +356,6 @@ spec:
               zoneGroup:
                 type: string
             required:
-            - dataPool
-            - metadataPool
             - zoneGroup
             type: object
           status:
