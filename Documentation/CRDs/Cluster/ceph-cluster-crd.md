@@ -29,9 +29,9 @@ Settings can be specified at the global level to apply to the cluster as a whole
     * `image`: The image used for running the ceph daemons. For example, `quay.io/ceph/ceph:v18.2.4`. For more details read the [container images section](#ceph-container-images).
         For the latest ceph images, see the [Ceph DockerHub](https://hub.docker.com/r/ceph/ceph/tags/).
         To ensure a consistent version of the image is running across all nodes in the cluster, it is recommended to use a very specific image version.
-        Tags also exist that would give the latest version, but they are only recommended for test environments. For example, the tag `v17` will be updated each time a new Quincy build is released.
-        Using the `v17` tag is not recommended in production because it may lead to inconsistent versions of the image running across different nodes in the cluster.
-    * `allowUnsupported`: If `true`, allow an unsupported major version of the Ceph release. Currently `quincy` and `reef` are supported. Future versions such as `squid` (v19) would require this to be set to `true`. Should be set to `false` in production.
+        Tags also exist that would give the latest version, but they are only recommended for test environments. For example, the tag `v19` will be updated each time a new Squid build is released.
+        Using the general `v19` tag is not recommended in production because it may lead to inconsistent versions of the image running across different nodes in the cluster.
+    * `allowUnsupported`: If `true`, allow an unsupported major version of the Ceph release. Currently Reef and Squid are supported. Future versions such as Tentacle (v20) would require this to be set to `true`. Should be set to `false` in production.
     * `imagePullPolicy`: The image pull policy for the ceph daemon pods. Possible values are `Always`, `IfNotPresent`, and `Never`. The default is `IfNotPresent`.
 * `dataDirHostPath`: The path on the host ([hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)) where config and data should be stored for each of the services. If the directory does not exist, it will be created. Because this directory persists on the host, it will remain after pods are deleted. Following paths and any of their subpaths **must not be used**: `/etc/ceph`, `/rook` or `/var/log/ceph`.
     * **WARNING**: For test scenarios, if you delete a cluster and start a new cluster on the same hosts, the path used by `dataDirHostPath` must be deleted. Otherwise, stale keys and other config will remain from the previous cluster and the new mons will fail to start.
@@ -52,6 +52,9 @@ If this value is empty, each pod will get an ephemeral directory to store their 
     * `externalMgrPrometheusPort`: external prometheus manager module port. See [external cluster configuration](./external-cluster/external-cluster.md) for more details.
     * `port`: The internal prometheus manager module port where the prometheus mgr module listens. The port may need to be configured when host networking is enabled.
     * `interval`: The interval for the prometheus module to to scrape targets.
+    * `exporter`: Ceph exporter metrics config.
+        * `perfCountersPrioLimit`: Specifies which performance counters are exported. Corresponds to `--prio-limit` Ceph exporter flag. `0` - all counters are exported, default is `5`.
+        * `statsPeriodSeconds`: Time to wait before sending requests again to exporter server (seconds). Corresponds to `--stats-period` Ceph exporter flag. Default is `5`.
 * `network`: For the network settings for the cluster, refer to the [network configuration settings](#network-configuration-settings)
 * `mon`: contains mon related options [mon settings](#mon-settings)
 For more details on the mons and when to choose a number other than `3`, see the [mon health doc](../../Storage-Configuration/Advanced/ceph-mon-health.md).
@@ -117,10 +120,10 @@ These are general purpose Ceph container with all necessary daemons and dependen
 
 | TAG                  | MEANING                                                   |
 | -------------------- | --------------------------------------------------------- |
-| vRELNUM              | Latest release in this series (e.g., **v17** = Quincy)      |
-| vRELNUM.Y            | Latest stable release in this stable series (e.g., v17.2) |
-| vRELNUM.Y.Z          | A specific release (e.g., v18.2.4)                        |
-| vRELNUM.Y.Z-YYYYMMDD | A specific build (e.g., v18.2.4-20240724)                 |
+| vRELNUM              | Latest release in this series (e.g., **v19** = Squid)     |
+| vRELNUM.Y            | Latest stable release in this stable series (e.g., v19.2) |
+| vRELNUM.Y.Z          | A specific release (e.g., v19.2.0)                        |
+| vRELNUM.Y.Z-YYYYMMDD | A specific build (e.g., v19.2.0-20240927)                 |
 
 A specific will contain a specific release of Ceph as well as security fixes from the Operating System.
 
@@ -822,9 +825,6 @@ set the `allowUninstallWithVolumes` to true under `spec.CleanupPolicy`.
 
 ## Ceph Config
 
-!!! attention
-    This feature is experimental.
-
 The Ceph config options are applied after the MONs are all in quorum and running.
 To set Ceph config options, you can add them to your `CephCluster` spec as shown below.
 See the [Ceph config reference](https://docs.ceph.com/en/latest/rados/configuration/general-config-ref/)
@@ -844,6 +844,17 @@ spec:
     "osd.*":
       osd_max_scrubs: "10"
 ```
+
+The Rook operator will actively apply these values, whereas the
+[ceph.conf settings](../../Storage-Configuration/Advanced/ceph-configuration/#custom-cephconf-settings)
+only take effect after the Ceph daemon pods are restarted.
+
+If both these `cephConfig` and [ceph.conf settings](../../Storage-Configuration/Advanced/ceph-configuration/#custom-cephconf-settings)
+are applied, the `cephConfig` settings will take higher precedence if there is an overlap.
+
+If Ceph settings need to be applied to mons before quorum is initially created, the
+[ceph.conf settings](../../Storage-Configuration/Advanced/ceph-configuration/#custom-cephconf-settings)
+should be used instead.
 
 !!! warning
     Rook performs no direct validation on these config options, so the validity of the settings is the

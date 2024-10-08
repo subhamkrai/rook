@@ -61,13 +61,13 @@ The following table lists the configurable parameters of the rook-operator chart
 | `csi.cephFSPluginUpdateStrategy` | CSI CephFS plugin daemonset update strategy, supported values are OnDelete and RollingUpdate | `RollingUpdate` |
 | `csi.cephFSPluginUpdateStrategyMaxUnavailable` | A maxUnavailable parameter of CSI cephFS plugin daemonset update strategy. | `1` |
 | `csi.cephcsi.repository` | Ceph CSI image repository | `"quay.io/cephcsi/cephcsi"` |
-| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.12.0"` |
+| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.12.2"` |
 | `csi.cephfsLivenessMetricsPort` | CSI CephFS driver metrics port | `9081` |
 | `csi.cephfsPodLabels` | Labels to add to the CSI CephFS Deployments and DaemonSets Pods | `nil` |
 | `csi.clusterName` | Cluster name identifier to set as metadata on the CephFS subvolume and RBD images. This will be useful in cases like for example, when two container orchestrator clusters (Kubernetes/OCP) are using a single ceph cluster | `nil` |
 | `csi.csiAddons.enabled` | Enable CSIAddons | `false` |
 | `csi.csiAddons.repository` | CSIAddons sidecar image repository | `"quay.io/csiaddons/k8s-sidecar"` |
-| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.9.1"` |
+| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.10.0"` |
 | `csi.csiAddonsPort` | CSI Addons server port | `9070` |
 | `csi.csiCephFSPluginResource` | CEPH CSI CephFS plugin resource requirement list | see values.yaml |
 | `csi.csiCephFSPluginVolume` | The volume of the CephCSI CephFS plugin DaemonSet | `nil` |
@@ -149,6 +149,7 @@ The following table lists the configurable parameters of the rook-operator chart
 | `discoveryDaemonInterval` | Set the discovery daemon device discovery interval (default to 60m) | `"60m"` |
 | `enableDiscoveryDaemon` | Enable discovery daemon | `false` |
 | `enableOBCWatchOperatorNamespace` | Whether the OBC provisioner should watch on the operator namespace or not, if not the namespace of the cluster will be used | `true` |
+| `enforceHostNetwork` | Whether to create all Rook pods to run on the host network, for example in environments where a CNI is not enabled | `false` |
 | `hostpathRequiresPrivileged` | Runs Ceph Pods as privileged to be able to write to `hostPaths` in OpenShift with SELinux restrictions. | `false` |
 | `image.pullPolicy` | Image pull policy | `"IfNotPresent"` |
 | `image.repository` | Image | `"docker.io/rook/ceph"` |
@@ -163,6 +164,7 @@ The following table lists the configurable parameters of the rook-operator chart
 | `rbacAggregate.enableOBCs` | If true, create a ClusterRole aggregated to [user facing roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles) for objectbucketclaims | `false` |
 | `rbacEnable` | If true, create & use RBAC resources | `true` |
 | `resources` | Pod resource requests & limits | `{"limits":{"memory":"512Mi"},"requests":{"cpu":"200m","memory":"128Mi"}}` |
+| `revisionHistoryLimit` | The revision history limit for all pods created by Rook. If blank, the K8s default is 10. | `nil` |
 | `scaleDownOperator` | If true, scale down the rook operator. This is useful for administrative actions where the rook operator must be scaled down, while using gitops style tooling to deploy your helm charts. | `false` |
 | `tolerations` | List of Kubernetes [`tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to add to the Deployment. | `[]` |
 | `unreachableNodeTolerationSeconds` | Delay to use for the `node.kubernetes.io/unreachable` pod failure toleration to override the Kubernetes default of 5 minutes | `5` |

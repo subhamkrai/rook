@@ -32,7 +32,6 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/osd/kms"
 	cephconfig "github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/controller"
-	cephver "github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -70,8 +69,6 @@ chown --recursive --verbose ceph:ceph $VAULT_TOKEN_NEW_PATH
 )
 
 var (
-	cephVersionMinRGWSSES3 = cephver.CephVersion{Major: 17, Minor: 2, Extra: 3}
-
 	//go:embed rgw-probe.sh
 	rgwProbeScriptTemplate string
 )
@@ -117,6 +114,7 @@ func (c *clusterConfig) createDeployment(rgwConfig *rgwConfig) (*apps.Deployment
 			Labels:    getLabels(c.store.Name, c.store.Namespace, true),
 		},
 		Spec: apps.DeploymentSpec{
+			RevisionHistoryLimit: controller.RevisionHistoryLimit(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(c.store.Name, c.store.Namespace, false),
 			},
@@ -692,9 +690,6 @@ func (c *clusterConfig) CheckRGWKMS() (bool, error) {
 
 func (c *clusterConfig) CheckRGWSSES3Enabled() (bool, error) {
 	if c.store.Spec.Security != nil && c.store.Spec.Security.ServerSideEncryptionS3.IsEnabled() {
-		if !c.clusterInfo.CephVersion.IsAtLeast(cephVersionMinRGWSSES3) {
-			return false, errors.New("minimum ceph quincy is required for AWS-SSE:S3")
-		}
 		err := kms.ValidateConnectionDetails(c.clusterInfo.Context, c.context, &c.store.Spec.Security.ServerSideEncryptionS3, c.store.Namespace)
 		if err != nil {
 			return false, err

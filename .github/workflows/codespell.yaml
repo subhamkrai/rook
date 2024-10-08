@@ -24,7 +24,7 @@ jobs:
     name: codespell
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           fetch-depth: 0
       - name: codespell
@@ -34,7 +34,8 @@ jobs:
           # in other places, so ignore the file itself assuming it is correct
           # crds.yaml, resources.yaml: CRD files are fully generated from content we control (should
           # be flagged elsewhere) and content we don't control (can't fix easily), so ignore
-          skip: .git,*.png,*.jpg,*.svg,*.sum,./LICENSE,./deploy/examples/crds.yaml,./deploy/charts/rook-ceph/templates/resources.yaml,./deploy/examples/csi-operator.yaml
+          # *Dashboard.jjson: Grafana dashboards that are generated via exporting them from Grafana.
+          skip: .git,*.png,*.jpg,*.svg,*.sum,./LICENSE,./deploy/examples/crds.yaml,./deploy/charts/rook-ceph/templates/resources.yaml,./deploy/examples/csi-operator.yaml,*Dashboard.json
           # aks: Amazon Kubernetes Service
           # keyserver: flag to apt-key
           # atleast: codespell wants to flag any 'AtLeast' method
@@ -52,7 +53,7 @@ jobs:
     name: misspell
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           fetch-depth: 0
       - name: misspell
