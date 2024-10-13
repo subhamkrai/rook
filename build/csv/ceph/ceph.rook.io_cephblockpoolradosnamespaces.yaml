@@ -42,6 +42,30 @@ spec:
                 x-kubernetes-validations:
                 - message: blockPoolName is immutable
                   rule: self == oldSelf
+              mirroring:
+                properties:
+                  mode:
+                    enum:
+                    - ""
+                    - pool
+                    - image
+                    type: string
+                  remoteNamespace:
+                    type: string
+                  snapshotSchedules:
+                    items:
+                      properties:
+                        interval:
+                          type: string
+                        path:
+                          type: string
+                        startTime:
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - mode
+                type: object
               name:
                 type: string
                 x-kubernetes-validations:
