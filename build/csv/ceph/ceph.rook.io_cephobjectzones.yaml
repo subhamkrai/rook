@@ -322,6 +322,8 @@ spec:
                         dataPoolName:
                           minLength: 1
                           type: string
+                        default:
+                          type: boolean
                         metadataPoolName:
                           minLength: 1
                           type: string
@@ -346,6 +348,7 @@ spec:
                           type: array
                       required:
                       - dataPoolName
+                      - default
                       - metadataPoolName
                       - name
                       type: object
