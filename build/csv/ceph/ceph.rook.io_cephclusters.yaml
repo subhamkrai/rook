@@ -1801,6 +1801,8 @@ spec:
                     type: array
                   onlyApplyOSDPlacement:
                     type: boolean
+                  scheduleAlways:
+                    type: boolean
                   storageClassDeviceSets:
                     items:
                       properties:

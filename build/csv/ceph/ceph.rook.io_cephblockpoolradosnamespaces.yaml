@@ -81,8 +81,102 @@ spec:
                   type: string
                 nullable: true
                 type: object
+              mirroringInfo:
+                properties:
+                  details:
+                    type: string
+                  lastChanged:
+                    type: string
+                  lastChecked:
+                    type: string
+                  mode:
+                    type: string
+                  peers:
+                    items:
+                      properties:
+                        client_name:
+                          type: string
+                        direction:
+                          type: string
+                        mirror_uuid:
+                          type: string
+                        site_name:
+                          type: string
+                        uuid:
+                          type: string
+                      type: object
+                    type: array
+                  site_name:
+                    type: string
+                type: object
+              mirroringStatus:
+                properties:
+                  details:
+                    type: string
+                  lastChanged:
+                    type: string
+                  lastChecked:
+                    type: string
+                  summary:
+                    properties:
+                      daemon_health:
+                        type: string
+                      health:
+                        type: string
+                      image_health:
+                        type: string
+                      states:
+                        nullable: true
+                        properties:
+                          error:
+                            type: integer
+                          replaying:
+                            type: integer
+                          starting_replay:
+                            type: integer
+                          stopped:
+                            type: integer
+                          stopping_replay:
+                            type: integer
+                          syncing:
+                            type: integer
+                          unknown:
+                            type: integer
+                        type: object
+                    type: object
+                type: object
               phase:
                 type: string
+              snapshotScheduleStatus:
+                properties:
+                  details:
+                    type: string
+                  lastChanged:
+                    type: string
+                  lastChecked:
+                    type: string
+                  snapshotSchedules:
+                    items:
+                      properties:
+                        image:
+                          type: string
+                        items:
+                          items:
+                            properties:
+                              interval:
+                                type: string
+                              start_time:
+                                type: string
+                            type: object
+                          type: array
+                        namespace:
+                          type: string
+                        pool:
+                          type: string
+                      type: object
+                    nullable: true
+                    type: array
+                type: object
             type: object
             x-kubernetes-preserve-unknown-fields: true
         required:
