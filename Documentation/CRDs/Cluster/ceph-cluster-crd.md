@@ -33,7 +33,7 @@ Settings can be specified at the global level to apply to the cluster as a whole
         Using the general `v19` tag is not recommended in production because it may lead to inconsistent versions of the image running across different nodes in the cluster.
     * `allowUnsupported`: If `true`, allow an unsupported major version of the Ceph release. Currently Reef and Squid are supported. Future versions such as Tentacle (v20) would require this to be set to `true`. Should be set to `false` in production.
     * `imagePullPolicy`: The image pull policy for the ceph daemon pods. Possible values are `Always`, `IfNotPresent`, and `Never`. The default is `IfNotPresent`.
-* `dataDirHostPath`: The path on the host ([hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)) where config and data should be stored for each of the services. If the directory does not exist, it will be created. Because this directory persists on the host, it will remain after pods are deleted. Following paths and any of their subpaths **must not be used**: `/etc/ceph`, `/rook` or `/var/log/ceph`.
+* `dataDirHostPath`: The path on the host ([hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)) where config and data should be stored for each of the services. If there are multiple clusters, the directory must be unique for each cluster. If the directory does not exist, it will be created. Because this directory persists on the host, it will remain after pods are deleted. Following paths and any of their subpaths **must not be used**: `/etc/ceph`, `/rook` or `/var/log/ceph`.
     * **WARNING**: For test scenarios, if you delete a cluster and start a new cluster on the same hosts, the path used by `dataDirHostPath` must be deleted. Otherwise, stale keys and other config will remain from the previous cluster and the new mons will fail to start.
 If this value is empty, each pod will get an ephemeral directory to store their config files that is tied to the lifetime of the pod running on that node. More details can be found in the Kubernetes [empty dir docs](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir).
 * `skipUpgradeChecks`: if set to true Rook won't perform any upgrade checks on Ceph daemons during an upgrade. Use this at **YOUR OWN RISK**, only if you know what you're doing. To understand Rook's upgrade process of Ceph, read the [upgrade doc](../../Upgrade/rook-upgrade.md#ceph-version-upgrades).
@@ -94,6 +94,8 @@ For more details on the mons and when to choose a number other than `3`, see the
         * For non-PVCs: `placement.all` and `placement.osd`
         * For PVCs: `placement.all` and inside the storageClassDeviceSets from the `placement` or `preparePlacement`
     * `flappingRestartIntervalHours`: Defines the time for which an OSD pod will sleep before restarting, if it stopped due to flapping. Flapping occurs where OSDs are marked `down` by Ceph more than 5 times in 600 seconds. The OSDs will stay down when flapping since they likely have a bad disk or other issue that needs investigation. If the issue with the OSD is fixed manually, the OSD pod can be manually restarted. The sleep is disabled if this interval is set to 0.
+    * `scheduleAlways`: Whether to always schedule OSD pods on nodes declared explicitly in the "nodes" section, even if they are
+        temporarily not schedulable. If set to true, consider adding placement tolerations for unschedulable nodes.
     * `fullRatio`: The ratio at which Ceph should block IO if the OSDs are too full. The default is 0.95.
     * `backfillFullRatio`: The ratio at which Ceph should stop backfilling data if the OSDs are too full. The default is 0.90.
     * `nearFullRatio`: The ratio at which Ceph should raise a health warning if the cluster is almost full. The default is 0.85.
@@ -485,6 +487,7 @@ You can set resource requests/limits for Rook components through the [Resource R
 It scrapes for Ceph daemon core dumps and sends them to the Ceph manager crash module so that core dumps are centralized and can be easily listed/accessed.
 You can read more about the [Ceph Crash module](https://docs.ceph.com/docs/master/mgr/crash/).
 * `logcollector`: Set resource requests/limits for the log collector. When enabled, this container runs as side-car to each Ceph daemons.
+* `cmd-reporter`: Set resource requests/limits for the jobs that detect the ceph version and collect network info.
 * `cleanup`: Set resource requests/limits for cleanup job, responsible for wiping cluster's data after uninstall
 * `exporter`: Set resource requests/limits for Ceph exporter.
 
