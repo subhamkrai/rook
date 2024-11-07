@@ -1510,7 +1510,6 @@ spec:
                           type: array
                       required:
                       - dataPoolName
-                      - default
                       - metadataPoolName
                       - name
                       type: object
