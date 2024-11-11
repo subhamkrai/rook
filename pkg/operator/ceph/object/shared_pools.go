@@ -13,14 +13,13 @@ import (
 )
 
 const (
-	defaultPlacementName           = "default"
 	defaultPlacementCephConfigName = "default-placement"
 	defaultPlacementStorageClass   = "STANDARD"
 )
 
 func IsNeedToCreateObjectStorePools(sharedPools cephv1.ObjectSharedPoolsSpec) bool {
 	for _, pp := range sharedPools.PoolPlacements {
-		if pp.Name == defaultPlacementName {
+		if pp.Default {
 			// No need to create pools. External pools from default placement will be used
 			return false
 		}
@@ -33,14 +32,25 @@ func IsNeedToCreateObjectStorePools(sharedPools cephv1.ObjectSharedPoolsSpec) bo
 }
 
 func validatePoolPlacements(placements []cephv1.PoolPlacementSpec) error {
+	hasDefault := false
 	names := make(map[string]struct{}, len(placements))
 	for _, p := range placements {
-		if _, ok := names[p.Name]; ok {
-			return fmt.Errorf("invalidObjStorePoolCofig: invalid placement %s: placement names must be unique", p.Name)
+		if hasDefault && p.Default {
+			return fmt.Errorf("invalidObjStorePoolConfig: only one placement can be set as default")
 		}
+		hasDefault = hasDefault || p.Default
+
+		if _, ok := names[p.Name]; ok {
+			return fmt.Errorf("invalidObjStorePoolConfig: invalid placement %s: placement names must be unique", p.Name)
+		}
+
+		if p.Name == defaultPlacementCephConfigName && !p.Default {
+			return fmt.Errorf("invalidObjStorePoolConfig: placement with name %s must be marked as default", defaultPlacementCephConfigName)
+		}
+
 		names[p.Name] = struct{}{}
 		if err := validatePoolPlacementStorageClasses(p.StorageClasses); err != nil {
-			return fmt.Errorf("invalidObjStorePoolCofig: invalid placement %s: %w", p.Name, err)
+			return fmt.Errorf("invalidObjStorePoolConfig: invalid placement %s: %w", p.Name, err)
 		}
 	}
 	return nil
@@ -91,10 +101,19 @@ func adjustZonePlacementPools(zone map[string]interface{}, spec cephv1.ObjectSha
 			return nil, fmt.Errorf("unable to get pool placement name for zone %s: %w", name, err)
 		}
 		// check if placement should be removed
-		if _, inSpec := fromSpec[placementID]; !inSpec && placementID != defaultPlacementCephConfigName {
-			// remove placement if it is not in spec, but don't remove default placement
-			idxToRemove[i] = struct{}{}
-			continue
+		if _, inSpec := fromSpec[placementID]; !inSpec {
+			if placementID == defaultPlacementCephConfigName {
+				// 'default-placement' should always be kept as a workaround for https://tracker.ceph.com/issues/68775.
+				// if user specified other placement as default, then copy pool names to 'default-placement' from it:
+				if userDefault, inSpec := fromSpec[getDefaultPlacementName(spec)]; inSpec {
+					// duplicate user defined default placement under 'default-placement' name in spec to update pools on the next step
+					fromSpec[defaultPlacementCephConfigName] = userDefault
+				}
+			} else {
+				// remove placement if it is not in spec
+				idxToRemove[i] = struct{}{}
+				continue
+			}
 		}
 		// update placement with values from spec:
 		if pSpec, inSpec := fromSpec[placementID]; inSpec {
@@ -144,6 +163,29 @@ func adjustZonePlacementPools(zone map[string]interface{}, spec cephv1.ObjectSha
 		placements = append(placements, pObj)
 	}
 
+	// sort placements array.
+	// Reason: 'radosgw-admin zone set --infile' sorts placement_pools by key before storing it in ceph
+	// and returns JSON with sorted placement_pools array. So we sort input array for easy comparison with applied JSON.
+	sort.Slice(placements, func(i, j int) bool {
+		pI, ok := placements[i].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		nameI, err := getObjProperty[string](pI, "key")
+		if err != nil {
+			return false
+		}
+		pJ, ok := placements[j].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		nameJ, err := getObjProperty[string](pJ, "key")
+		if err != nil {
+			return false
+		}
+		return nameI < nameJ
+	})
+
 	_, err = updateObjProperty(zone, placements, "placement_pools")
 	if err != nil {
 		return nil, fmt.Errorf("unable to set pool placements for zone %q: %w", name, err)
@@ -151,9 +193,18 @@ func adjustZonePlacementPools(zone map[string]interface{}, spec cephv1.ObjectSha
 	return zone, nil
 }
 
+func getDefaultPlacementName(spec cephv1.ObjectSharedPoolsSpec) string {
+	for _, p := range spec.PoolPlacements {
+		if p.Default {
+			return p.Name
+		}
+	}
+	return defaultPlacementCephConfigName
+}
+
 func getDefaultMetadataPool(spec cephv1.ObjectSharedPoolsSpec) string {
 	for _, p := range spec.PoolPlacements {
-		if p.Name == defaultPlacementName {
+		if p.Default {
 			return p.MetadataPoolName
 		}
 	}
@@ -162,18 +213,9 @@ func getDefaultMetadataPool(spec cephv1.ObjectSharedPoolsSpec) string {
 
 // toZonePlacementPools converts pool placement CRD definition to zone config json format structures
 func toZonePlacementPools(spec cephv1.ObjectSharedPoolsSpec, ns string) map[string]ZonePlacementPool {
-	hasDefault := false
 	res := make(map[string]ZonePlacementPool, len(spec.PoolPlacements)+1)
-	for _, pp := range spec.PoolPlacements {
-		name := pp.Name
-		if pp.Name == defaultPlacementName {
-			hasDefault = true
-			name = defaultPlacementCephConfigName
-		}
-		res[name] = toZonePlacementPool(pp, ns)
-	}
-	if !hasDefault && spec.DataPoolName != "" && spec.MetadataPoolName != "" {
-		// set shared pools as default if no default placement was provided
+	// map sharedPools if presented:
+	if spec.DataPoolName != "" && spec.MetadataPoolName != "" {
 		res[defaultPlacementCephConfigName] = ZonePlacementPool{
 			Key: defaultPlacementCephConfigName,
 			Val: ZonePlacementPoolVal{
@@ -193,14 +235,15 @@ func toZonePlacementPools(spec cephv1.ObjectSharedPoolsSpec, ns string) map[stri
 			},
 		}
 	}
+	// map pool placements:
+	for _, pp := range spec.PoolPlacements {
+		res[pp.Name] = toZonePlacementPool(pp, ns)
+	}
 	return res
 }
 
 func toZonePlacementPool(spec cephv1.PoolPlacementSpec, ns string) ZonePlacementPool {
-	placementNS := ns
-	if spec.Name != defaultPlacementName {
-		placementNS += "." + spec.Name
-	}
+	placementNS := ns + "." + spec.Name
 	// The extra pool is for omap data for multi-part uploads, so we use
 	// the metadata pool instead of the data pool.
 	nonECPool := spec.MetadataPoolName + ":" + placementNS + ".data.non-ec"
@@ -218,14 +261,11 @@ func toZonePlacementPool(spec cephv1.PoolPlacementSpec, ns string) ZonePlacement
 					DataPool: spec.DataPoolName + ":" + placementNS + ".data",
 				},
 			},
-			// Workaround: radosgw-admin set zone json command sets incorrect default value for placement inline_data field.
+			// Workaround: 'radosgw-admin set zone json' command sets incorrect default value for placement inline_data field.
 			// So we should set default value (true) explicitly.
 			// See: https://tracker.ceph.com/issues/67933
 			InlineData: true,
 		},
-	}
-	if res.Key == defaultPlacementName {
-		res.Key = defaultPlacementCephConfigName
 	}
 	for _, v := range spec.StorageClasses {
 		res.Val.StorageClasses[v.Name] = ZonePlacementStorageClass{
@@ -235,7 +275,7 @@ func toZonePlacementPool(spec cephv1.PoolPlacementSpec, ns string) ZonePlacement
 	return res
 }
 
-func adjustZoneGroupPlacementTargets(group, zone map[string]interface{}) (map[string]interface{}, error) {
+func adjustZoneGroupPlacementTargets(group, zone map[string]interface{}, defaultPlacement string) (map[string]interface{}, error) {
 	name, err := getObjProperty[string](group, "name")
 	if err != nil {
 		return nil, fmt.Errorf("unable to get zonegroup name: %w", err)
@@ -247,7 +287,7 @@ func adjustZoneGroupPlacementTargets(group, zone map[string]interface{}) (map[st
 		return nil, fmt.Errorf("unable to deep copy config for zonegroup %s: %w", name, err)
 	}
 
-	_, err = updateObjProperty(group, defaultPlacementCephConfigName, "default_placement")
+	_, err = updateObjProperty(group, defaultPlacement, "default_placement")
 	if err != nil {
 		return nil, fmt.Errorf("unable to set default_placement for zonegroup %s: %w", name, err)
 	}
@@ -481,7 +521,7 @@ func updateZoneGroupJSON(objContext *Context, group map[string]interface{}) (map
 	args := []string{"zonegroup", "set", zoneArg, "--infile=" + configFilename, realmArg, zoneGroupArg}
 	updatedBytes, err := RunAdminCommandNoMultisite(objContext, false, args...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set zone config")
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to set zonegroup config %s", updatedBytes))
 	}
 	updated := map[string]interface{}{}
 	err = json.Unmarshal([]byte(updatedBytes), &updated)

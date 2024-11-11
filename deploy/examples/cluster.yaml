@@ -26,7 +26,7 @@ spec:
     # Future versions such as Tentacle (v20) would require this to be set to `true`.
     # Do not set to true in production.
     allowUnsupported: false
-  # The path on the host where configuration files will be persisted. Must be specified.
+  # The path on the host where configuration files will be persisted. Must be specified. If there are multiple clusters, the directory must be unique for each cluster.
   # Important: if you reinstall the cluster, make sure you delete this directory from each host or else the mons will fail to start on the new cluster.
   # In Minikube, the '/data' directory is configured to persist across reboots. Use "/data/rook" in Minikube environment.
   dataDirHostPath: /var/lib/rook
@@ -251,6 +251,7 @@ spec:
   #   logcollector:
   #   cleanup:
   #   exporter:
+  #   cmd-reporter:
   # The option to automatically remove OSDs that are out and are safe to destroy.
   removeOSDsIfOutAndSafeToRemove: false
   priorityClassNames:
@@ -285,6 +286,9 @@ spec:
     #     config: # configuration can be specified at the node level which overrides the cluster level config
     #   - name: "172.17.4.301"
     #     deviceFilter: "^sd."
+    # Whether to always schedule OSD pods on nodes declared explicitly in the "nodes" section, even if they are
+    # temporarily not schedulable. If set to true, consider adding placement tolerations for unschedulable nodes.
+    scheduleAlways: false
     # when onlyApplyOSDPlacement is false, will merge both placement.All() and placement.osd
     onlyApplyOSDPlacement: false
     # Time for which an OSD pod will sleep before restarting, if it stopped due to flapping

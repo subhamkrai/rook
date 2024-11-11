@@ -330,11 +330,12 @@ func TestConfigureStoreWithSharedPools(t *testing.T) {
 		assert.True(t, zoneGroupGetCalled)
 		assert.False(t, zoneGroupSetCalled) // zone group is set only if extra pool placements specified
 	})
-	t.Run("configure with default placement", func(t *testing.T) {
+	t.Run("configure with new default placement", func(t *testing.T) {
 		sharedPools := cephv1.ObjectSharedPoolsSpec{
 			PoolPlacements: []cephv1.PoolPlacementSpec{
 				{
-					Name:             defaultPlacementName,
+					Name:             "default",
+					Default:          true,
 					MetadataPoolName: "test-meta",
 					DataPoolName:     "test-data",
 				},
@@ -346,9 +347,11 @@ func TestConfigureStoreWithSharedPools(t *testing.T) {
 		assert.True(t, zoneSetCalled)
 		assert.False(t, placementModifyCalled) // mock returns applied namespases, no workaround needed
 		assert.True(t, zoneGroupGetCalled)
-		assert.False(t, zoneGroupSetCalled) // zone group is set only if extra pool placements specified
+		assert.True(t, zoneGroupSetCalled)
 	})
 	t.Run("data pool already set", func(t *testing.T) {
+		// reset
+		zoneGroupSetCalled = false
 		// Simulate that the data pool has already been set and the zone update can be skipped
 		sharedPools := cephv1.ObjectSharedPoolsSpec{
 			MetadataPoolName: "test-meta",
@@ -370,7 +373,8 @@ func TestConfigureStoreWithSharedPools(t *testing.T) {
 		sharedPools := cephv1.ObjectSharedPoolsSpec{
 			PoolPlacements: []cephv1.PoolPlacementSpec{
 				{
-					Name:             defaultPlacementName,
+					Name:             "default",
+					Default:          true,
 					MetadataPoolName: "test-meta",
 					DataPoolName:     "test-data",
 				},

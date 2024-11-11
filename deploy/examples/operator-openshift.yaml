@@ -139,11 +139,6 @@ data:
   # there is significant drop in read/write performance.
   # CSI_ENABLE_HOST_NETWORK: "true"
 
-  # Deprecation note: Rook uses "holder" pods to allow CSI to connect to the multus public network
-  # without needing hosts to the network. Holder pods are being removed. See issue for details:
-  # https://github.com/rook/rook/issues/13055. New Rook deployments should set this to "true".
-  CSI_DISABLE_HOLDER_PODS: "true"
-
   # Set logging level for cephCSI containers maintained by the cephCSI.
   # Supported values from 0 to 5. 0 for general useful logs, 5 for trace level verbosity.
   # CSI_LOG_LEVEL: "0"
@@ -187,9 +182,6 @@ data:
   # (Optional) policy for modifying a volume's ownership or permissions when the NFS PVC is being mounted.
   # supported values are documented at https://kubernetes-csi.github.io/docs/support-fsgroup.html
   CSI_NFS_FSGROUPPOLICY: "File"
-
-  # (Optional) Allow starting unsupported ceph-csi image
-  ROOK_CSI_ALLOW_UNSUPPORTED_VERSION: "false"
 
   # (Optional) control the host mount of /etc/selinux for csi plugin pods.
   CSI_PLUGIN_ENABLE_SELINUX_HOST_MOUNT: "false"
@@ -695,11 +687,6 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   key: ROOK_CURRENT_NAMESPACE_ONLY
-                  name: ocs-operator-config
-            - name: CSI_DISABLE_HOLDER_PODS
-              valueFrom:
-                configMapKeyRef:
-                  key: CSI_DISABLE_HOLDER_PODS
                   name: ocs-operator-config
             - name: ROOK_ALLOW_MULTIPLE_FILESYSTEMS
               value: "false"

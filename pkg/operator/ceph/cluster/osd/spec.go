@@ -482,6 +482,12 @@ func (c *Cluster) makeDeployment(osdProps osdProperties, osd *OSDInfo, provision
 		Privileged:             &privileged,
 		RunAsUser:              &runAsUser,
 		ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+		Capabilities: &v1.Capabilities{
+			Add: []v1.Capability{},
+			Drop: []v1.Capability{
+				"NET_RAW",
+			},
+		},
 	}
 
 	// needed for luksOpen synchronization when devices are encrypted and the osd is prepared with LVM
@@ -867,10 +873,13 @@ func (c *Cluster) getActivateOSDInitContainer(configDir, namespace, osdID string
 
 	adminKeyringVol, adminKeyringVolMount := cephkey.Volume().Admin(), cephkey.VolumeMount().Admin()
 	volume = append(volume, adminKeyringVol)
+	udevVolume := v1.Volume{Name: "udev", VolumeSource: v1.VolumeSource{HostPath: &v1.HostPathVolumeSource{Path: "/run/udev"}}}
+	volume = append(volume, udevVolume)
 	volMounts := []v1.VolumeMount{
 		{Name: activateOSDVolumeName, MountPath: activateOSDMountPathID},
 		{Name: "devices", MountPath: "/dev"},
 		{Name: k8sutil.ConfigOverrideName, ReadOnly: true, MountPath: opconfig.EtcCephDir},
+		{Name: "udev", MountPath: "/run/udev"},
 		adminKeyringVolMount,
 	}
 
@@ -909,6 +918,9 @@ func getBlockDevMapperContext() *v1.SecurityContext {
 		Capabilities: &v1.Capabilities{
 			Add: []v1.Capability{
 				"MKNOD",
+			},
+			Drop: []v1.Capability{
+				"NET_RAW",
 			},
 		},
 		Privileged: &privileged,

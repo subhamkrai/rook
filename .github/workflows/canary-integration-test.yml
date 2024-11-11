@@ -25,7 +25,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -33,6 +33,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -334,7 +335,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -342,6 +343,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -412,13 +414,14 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
       - name: consider debugging
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -463,7 +466,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -471,6 +474,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -512,7 +516,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -520,6 +524,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -570,7 +575,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -578,6 +583,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -622,7 +628,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -630,6 +636,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -679,7 +686,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -687,6 +694,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -755,7 +763,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -763,6 +771,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -807,7 +816,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -815,6 +824,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -862,7 +872,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -870,6 +880,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -930,7 +941,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -938,6 +949,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -984,7 +996,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -992,6 +1004,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1048,7 +1061,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1056,6 +1069,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1085,6 +1099,7 @@ jobs:
           yq write -i tests/manifests/test-cluster-on-pvc-encrypted.yaml "spec.storage.storageClassDeviceSets[0].count" 2
           yq write -i tests/manifests/test-cluster-on-pvc-encrypted.yaml "spec.storage.storageClassDeviceSets[0].volumeClaimTemplates[0].spec.resources.requests.storage" 6Gi
           kubectl create -f tests/manifests/test-cluster-on-pvc-encrypted.yaml
+          kubectl patch -n rook-ceph cephcluster rook-ceph --type merge -p '{"spec":{"security":{"keyRotation":{"enabled": true, "schedule":"*/1 * * * *"}}}}'
           yq merge --inplace --arrays append tests/manifests/test-object.yaml tests/manifests/test-kms-vault-spec-token-auth.yaml
           yq write -i tests/manifests/test-object.yaml "spec.security.kms.connectionDetails.VAULT_BACKEND_PATH" rook/ver2
           kubectl create -f tests/manifests/test-object.yaml
@@ -1104,6 +1119,9 @@ jobs:
         run: |
           tests/scripts/deploy-validate-vault.sh validate_osd
           sudo lsblk
+
+      - name: wait and verify key rotation
+        run: tests/scripts/deploy-validate-vault.sh validate_key_rotation rook/ver1
 
       - name: validate rgw vault kv
         run: |
@@ -1134,7 +1152,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1142,6 +1160,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1170,6 +1189,7 @@ jobs:
           yq write -i tests/manifests/test-cluster-on-pvc-encrypted.yaml "spec.storage.storageClassDeviceSets[0].count" 2
           yq write -i tests/manifests/test-cluster-on-pvc-encrypted.yaml "spec.storage.storageClassDeviceSets[0].volumeClaimTemplates[0].spec.resources.requests.storage" 6Gi
           kubectl create -f tests/manifests/test-cluster-on-pvc-encrypted.yaml
+          kubectl patch -n rook-ceph cephcluster rook-ceph --type merge -p '{"spec":{"security":{"keyRotation":{"enabled": true, "schedule":"*/1 * * * *"}}}}'
           tests/scripts/github-action-helper.sh deploy_manifest_with_local_build deploy/examples/toolbox.yaml
 
       - name: wait for prepare pod
@@ -1186,6 +1206,9 @@ jobs:
           tests/scripts/deploy-validate-vault.sh validate_osd
           sudo lsblk
 
+      - name: wait and verify key rotation
+        run: KUBERNETES_AUTH=true tests/scripts/deploy-validate-vault.sh validate_key_rotation rook/ver1
+
       - name: collect common logs
         if: always()
         uses: ./.github/workflows/collect-logs
@@ -1200,7 +1223,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1208,6 +1231,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1257,7 +1281,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1265,6 +1289,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1516,7 +1541,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1524,6 +1549,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
@@ -1611,7 +1637,7 @@ jobs:
       matrix:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1619,6 +1645,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: run encryption KMS IBM Key Protect
         uses: ./.github/workflows/encryption-pvc-kms-ibm-kp
@@ -1631,8 +1658,9 @@ jobs:
           ibm-service-api-key: ${{ secrets.IBM_SERVICE_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           artifact-name: ${{ github.job }}-${{ matrix.ceph-image }}
+          ceph-image: ${{ matrix.ceph-image }}
 
-  multus-cluster-network:
+  multus-public-and-cluster:
     runs-on: ubuntu-22.04
     if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
     strategy:
@@ -1640,7 +1668,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1648,46 +1676,52 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
-
-      - name: setup golang
-        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
-        with:
-          go-version: "1.22"
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config
 
       - name: set Ceph version in CephCluster manifest
-        run: tests/scripts/github-action-helper.sh replace_ceph_image  "deploy/examples/cluster-test.yaml" "${{ matrix.ceph-image }}"
+        run: tests/scripts/github-action-helper.sh replace_ceph_image "deploy/examples/cluster-multus-test.yaml" "${{ matrix.ceph-image }}"
 
-      - name: allow holder pod deployment
-        run: sed -i "s|CSI_DISABLE_HOLDER_PODS|# CSI_DISABLE_HOLDER_PODS|g" "deploy/examples/operator.yaml"
+      - name: Setup multus
+        run: ./tests/scripts/multus/setup-multus.sh
 
-      - name: validate-yaml
-        run: tests/scripts/github-action-helper.sh validate_yaml
+      - name: Set up multus prerequisite host routing
+        run: kubectl create -f tests/scripts/multus/host-cfg-ds.yaml
+
+      - name: create cluster prerequisites
+        run: tests/scripts/github-action-helper.sh create_cluster_prerequisites
+
+      - name: Install public and cluster NADs in rook-ceph namespace
+        run: kubectl create -f tests/scripts/multus/rook-ceph-public-cluster-nads.yaml
 
       - name: use local disk and create partitions for osds
         run: |
           tests/scripts/github-action-helper.sh use_local_disk
           tests/scripts/github-action-helper.sh create_partitions_for_osds
 
-      - name: deploy multus
-        run: tests/scripts/github-action-helper.sh deploy_multus
+      - name: deploy cluster
+        run: |
+          tests/scripts/github-action-helper.sh deploy_manifest_with_local_build deploy/examples/operator.yaml
 
-      - name: deploy multus cluster
-        run: tests/scripts/github-action-helper.sh deploy_multus_cluster
+          export BLOCK="$(tests/scripts/github-action-helper.sh find_extra_block_dev)"
+          yq write -i deploy/examples/cluster-multus-test.yaml "spec.storage.deviceFilter" "${BLOCK}"
+          kubectl create -f deploy/examples/cluster-multus-test.yaml
+
+          tests/scripts/github-action-helper.sh deploy_toolbox
+
+          kubectl create -f deploy/examples/filesystem-test.yaml
+          kubectl create -f deploy/examples/nfs-test.yaml
 
       - name: wait for prepare pod
         run: tests/scripts/github-action-helper.sh wait_for_prepare_pod 2
 
       - name: wait for ceph to be ready
-        run: IS_POD_NETWORK=true IS_MULTUS=true tests/scripts/github-action-helper.sh wait_for_ceph_to_be_ready osd 2
-
-      - name: wait for ceph-csi configmap to be updated with network namespace
-        run: tests/scripts/github-action-helper.sh wait_for_ceph_csi_configmap_to_be_updated
+        run: tests/scripts/github-action-helper.sh wait_for_ceph_to_be_ready osd 2
 
       - name: wait for cephnfs to be ready
-        run: IS_POD_NETWORK=true IS_MULTUS=true tests/scripts/github-action-helper.sh wait_for_ceph_to_be_ready nfs 1
+        run: tests/scripts/github-action-helper.sh wait_for_ceph_to_be_ready nfs 1
 
       - name: check multus connections
         run: tests/scripts/github-action-helper.sh test_multus_connections
@@ -1708,64 +1742,6 @@ jobs:
           name: ${{ github.job }}-${{ matrix.ceph-image }}
           additional-namespace: kube-system
 
-  csi-hostnetwork-disabled:
-    runs-on: ubuntu-22.04
-    if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
-    strategy:
-      matrix:
-        ceph-image: ${{ fromJson(inputs.ceph_images) }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-        with:
-          fetch-depth: 0
-
-      - name: consider debugging
-        uses: ./.github/workflows/tmate_debug
-        with:
-          use-tmate: ${{ secrets.USE_TMATE }}
-
-      - name: setup cluster resources
-        uses: ./.github/workflows/canary-test-config
-
-      - name: allow holder pod deployment
-        run: sed -i "s|CSI_DISABLE_HOLDER_PODS|# CSI_DISABLE_HOLDER_PODS|g" "deploy/examples/operator.yaml"
-
-      - name: set Ceph version in CephCluster manifest
-        run: tests/scripts/github-action-helper.sh replace_ceph_image  "deploy/examples/cluster-test.yaml" "${{ matrix.ceph-image }}"
-
-      - name: use local disk and create partitions for osds
-        run: |
-          tests/scripts/github-action-helper.sh use_local_disk
-          tests/scripts/github-action-helper.sh create_partitions_for_osds
-
-      - name: deploy CSI hostNetworking disabled cluster
-        run: tests/scripts/github-action-helper.sh deploy_csi_hostnetwork_disabled_cluster
-
-      - name: wait for prepare pod
-        run: tests/scripts/github-action-helper.sh wait_for_prepare_pod 2
-
-      - name: wait for ceph to be ready
-        run: IS_POD_NETWORK=true tests/scripts/github-action-helper.sh wait_for_ceph_to_be_ready osd 2
-
-      - name: wait for ceph-csi configmap to be updated with network namespace
-        run: tests/scripts/github-action-helper.sh wait_for_ceph_csi_configmap_to_be_updated
-
-      - name: test ceph-csi-rbd plugin restart
-        run: tests/scripts/github-action-helper.sh test_csi_rbd_workload
-
-      - name: test ceph-csi-cephfs plugin restart
-        run: tests/scripts/github-action-helper.sh test_csi_cephfs_workload
-
-      - name: test ceph-csi-nfs plugin restart
-        run: tests/scripts/github-action-helper.sh test_csi_nfs_workload
-
-      - name: collect common logs
-        if: always()
-        uses: ./.github/workflows/collect-logs
-        with:
-          name: ${{ github.job }}-${{ matrix.ceph-image }}
-
   two-object-one-zone:
     runs-on: ubuntu-22.04
     if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"
@@ -1774,7 +1750,7 @@ jobs:
         ceph-image: ${{ fromJson(inputs.ceph_images) }}
     steps:
       - name: checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -1782,6 +1758,7 @@ jobs:
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
         uses: ./.github/workflows/canary-test-config

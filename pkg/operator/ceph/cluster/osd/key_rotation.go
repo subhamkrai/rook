@@ -94,6 +94,12 @@ func (c *Cluster) getKeyRotationContainer(osdProps osdProperties, volumeMounts [
 			RunAsUser:              &runAsUser,
 			RunAsNonRoot:           &runAsNonRoot,
 			ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+			Capabilities: &v1.Capabilities{
+				Add: []v1.Capability{},
+				Drop: []v1.Capability{
+					"NET_RAW",
+				},
+			},
 		},
 		Resources: osdProps.resources,
 	}
@@ -135,6 +141,12 @@ func (c *Cluster) getKeyRotationPodTemplateSpec(osdProps osdProperties, osd OSDI
 	}
 	if osdProps.walPVC.ClaimName != "" {
 		devices = append(devices, encryptionBlockDestinationCopy(devicesBasePath, bluestoreWalName))
+	}
+
+	if c.spec.Security.KeyManagementService.IsVaultKMS() {
+		volumeTLS, volumeMountTLS := kms.VaultVolumeAndMount(c.spec.Security.KeyManagementService.ConnectionDetails, "")
+		volumes = append(volumes, volumeTLS)
+		volumeMounts = append(volumeMounts, volumeMountTLS)
 	}
 
 	keyRotationContainer, err := c.getKeyRotationContainer(osdProps, volumeMounts, devices)
