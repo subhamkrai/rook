@@ -3463,6 +3463,13 @@ spec:
                 - replicasets
               verbs:
                 - get
+            - apiGroups:
+                - apps
+              resources:
+                - deployments/finalizers
+                - daemonsets/finalizers
+              verbs:
+                - update
           serviceAccountName: rook-csi-cephfs-provisioner-sa
         - rules:
             - apiGroups:
@@ -3485,6 +3492,13 @@ spec:
                 - replicasets
               verbs:
                 - get
+            - apiGroups:
+                - apps
+              resources:
+                - deployments/finalizers
+                - daemonsets/finalizers
+              verbs:
+                - update
           serviceAccountName: rook-csi-rbd-plugin-sa
         - rules:
             - apiGroups:
@@ -3518,6 +3532,13 @@ spec:
                 - replicasets
               verbs:
                 - get
+            - apiGroups:
+                - apps
+              resources:
+                - deployments/finalizers
+                - daemonsets/finalizers
+              verbs:
+                - update
           serviceAccountName: rook-csi-rbd-provisioner-sa
     strategy: deployment
   installModes:
