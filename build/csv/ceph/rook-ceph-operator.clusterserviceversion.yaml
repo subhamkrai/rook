@@ -3451,6 +3451,7 @@ spec:
                 - get
                 - create
                 - update
+                - delete
             - apiGroups:
                 - ""
               resources:
@@ -3480,6 +3481,7 @@ spec:
                 - get
                 - create
                 - update
+                - delete
             - apiGroups:
                 - ""
               resources:
@@ -3520,6 +3522,7 @@ spec:
                 - get
                 - create
                 - update
+                - delete
             - apiGroups:
                 - ""
               resources:
