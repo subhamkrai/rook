@@ -1402,6 +1402,20 @@ spec:
                 type: boolean
               protocols:
                 properties:
+                  enableAPIs:
+                    items:
+                      enum:
+                      - s3
+                      - s3website
+                      - swift
+                      - swift_auth
+                      - admin
+                      - sts
+                      - iam
+                      - notifications
+                      type: string
+                    nullable: true
+                    type: array
                   s3:
                     nullable: true
                     properties:
