@@ -237,6 +237,8 @@ spec:
                           type: object
                         type: array
                     type: object
+                  name:
+                    type: string
                   parameters:
                     additionalProperties:
                       type: string
@@ -1080,6 +1082,8 @@ spec:
                     type: array
                 type: object
               preserveFilesystemOnDelete:
+                type: boolean
+              preservePoolNames:
                 type: boolean
               preservePoolsOnDelete:
                 type: boolean

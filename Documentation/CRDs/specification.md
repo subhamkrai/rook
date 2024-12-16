@@ -1127,8 +1127,8 @@ FilesystemSpec
 <td>
 <code>metadataPool</code><br/>
 <em>
-<a href="#ceph.rook.io/v1.PoolSpec">
-PoolSpec
+<a href="#ceph.rook.io/v1.NamedPoolSpec">
+NamedPoolSpec
 </a>
 </em>
 </td>
@@ -1147,6 +1147,18 @@ PoolSpec
 </td>
 <td>
 <p>The data pool settings, with optional predefined pool name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>preservePoolNames</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Preserve pool names as specified</p>
 </td>
 </tr>
 <tr>
@@ -6582,8 +6594,8 @@ FilesystemSnapshotScheduleStatusRetention
 <td>
 <code>metadataPool</code><br/>
 <em>
-<a href="#ceph.rook.io/v1.PoolSpec">
-PoolSpec
+<a href="#ceph.rook.io/v1.NamedPoolSpec">
+NamedPoolSpec
 </a>
 </em>
 </td>
@@ -6602,6 +6614,18 @@ PoolSpec
 </td>
 <td>
 <p>The data pool settings, with optional predefined pool name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>preservePoolNames</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Preserve pool names as specified</p>
 </td>
 </tr>
 <tr>
@@ -9830,6 +9854,13 @@ If spec.sharedPools are also empty, then RGW pools (spec.dataPool and spec.metad
 </tr>
 </tbody>
 </table>
+<h3 id="ceph.rook.io/v1.ObjectStoreAPI">ObjectStoreAPI
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ProtocolSpec">ProtocolSpec</a>)
+</p>
+<div>
+</div>
 <h3 id="ceph.rook.io/v1.ObjectStoreHostingSpec">ObjectStoreHostingSpec
 </h3>
 <p>
@@ -11147,7 +11178,7 @@ This list allows defining additional StorageClasses on top of default STANDARD s
 <h3 id="ceph.rook.io/v1.PoolSpec">PoolSpec
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.FilesystemSpec">FilesystemSpec</a>, <a href="#ceph.rook.io/v1.NamedBlockPoolSpec">NamedBlockPoolSpec</a>, <a href="#ceph.rook.io/v1.NamedPoolSpec">NamedPoolSpec</a>, <a href="#ceph.rook.io/v1.ObjectStoreSpec">ObjectStoreSpec</a>, <a href="#ceph.rook.io/v1.ObjectZoneSpec">ObjectZoneSpec</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.NamedBlockPoolSpec">NamedBlockPoolSpec</a>, <a href="#ceph.rook.io/v1.NamedPoolSpec">NamedPoolSpec</a>, <a href="#ceph.rook.io/v1.ObjectStoreSpec">ObjectStoreSpec</a>, <a href="#ceph.rook.io/v1.ObjectZoneSpec">ObjectZoneSpec</a>)
 </p>
 <div>
 <p>PoolSpec represents the spec of ceph pool</p>
@@ -11396,6 +11427,23 @@ alive or ready to receive traffic.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>enableAPIs</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ObjectStoreAPI">
+[]ObjectStoreAPI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Represents RGW &lsquo;rgw_enable_apis&rsquo; config option. See: <a href="https://docs.ceph.com/en/reef/radosgw/config-ref/#confval-rgw_enable_apis">https://docs.ceph.com/en/reef/radosgw/config-ref/#confval-rgw_enable_apis</a>
+If no value provided then all APIs will be enabled: s3, s3website, swift, swift_auth, admin, sts, iam, notifications
+If enabled APIs are set, all remaining APIs will be disabled.
+This option overrides S3.Enabled value.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>s3</code><br/>
@@ -11901,7 +11949,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Whether to enable S3. This defaults to true (even if protocols.s3 is not present in the CRD). This maintains backwards compatibility – by default S3 is enabled.</p>
+<p>Deprecated: use protocol.enableAPIs instead.
+Whether to enable S3. This defaults to true (even if protocols.s3 is not present in the CRD). This maintains backwards compatibility – by default S3 is enabled.</p>
 </td>
 </tr>
 <tr>

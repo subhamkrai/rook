@@ -46,10 +46,10 @@ const (
 	reefTestImage  = "quay.io/ceph/ceph:v18"
 	squidTestImage = "quay.io/ceph/ceph:v19"
 	// test with the current development versions
-	reefDevelTestImage  = "quay.io/ceph/daemon-base:latest-reef-devel"
-	squidDevelTestImage = "quay.io/ceph/daemon-base:latest-squid-devel"
+	reefDevelTestImage  = "quay.ceph.io/ceph-ci/ceph:reef"
+	squidDevelTestImage = "quay.ceph.io/ceph-ci/ceph:squid"
 	// test with the latest Ceph main image
-	mainTestImage      = "quay.io/ceph/daemon-base:latest-main-devel"
+	mainTestImage      = "quay.ceph.io/ceph-ci/ceph:main"
 	cephOperatorLabel  = "app=rook-ceph-operator"
 	defaultclusterName = "test-cluster"
 
@@ -267,8 +267,8 @@ func (h *CephInstaller) CreateCephCluster() error {
 
 func (h *CephInstaller) waitForCluster() error {
 	monWaitLabel := "app=rook-ceph-mon,mon_daemon=true"
-	if h.Manifests.Settings().RookVersion == Version1_14 {
-		// TODO: Remove this when upgrade test is from v1.15 since v1.14 does not have the mon_daemon label
+	if h.Manifests.Settings().RookVersion == Version1_15 {
+		// TODO: Remove this when upgrade test is from v1.15.7 since prior releases do not have the mon_daemon label
 		monWaitLabel = "app=rook-ceph-mon"
 	}
 	if err := h.k8shelper.WaitForPodCount(monWaitLabel, h.settings.Namespace, h.settings.Mons); err != nil {
