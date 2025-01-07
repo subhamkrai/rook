@@ -57,6 +57,9 @@ The first step is to deploy the Rook operator.
 !!! note
     These steps are for a standard production Rook deployment in Kubernetes. For Openshift, testing, or more options, see the [example configurations documentation](example-configurations.md).
 
+!!! note
+    Rook images are available in multiple container repositories. For dockerHub it is available under **rook/ceph** org, for Quay it is available under **** and for Quay images are available under ****.
+
 ```console
 cd deploy/examples
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml
