@@ -2586,9 +2586,6 @@ spec:
                 - get
                 - list
                 - watch
-                - update
-                - patch
-                - create
             - apiGroups:
                 - snapshot.storage.k8s.io
               resources:
@@ -2607,7 +2604,6 @@ spec:
                 - watch
                 - patch
                 - update
-                - create
             - apiGroups:
                 - snapshot.storage.k8s.io
               resources:
@@ -2930,9 +2926,6 @@ spec:
                 - get
                 - list
                 - watch
-                - update
-                - patch
-                - create
             - apiGroups:
                 - snapshot.storage.k8s.io
               resources:
@@ -2951,7 +2944,6 @@ spec:
                 - watch
                 - patch
                 - update
-                - create
             - apiGroups:
                 - snapshot.storage.k8s.io
               resources:
