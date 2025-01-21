@@ -3044,6 +3044,11 @@ spec:
                           configMapKeyRef:
                             key: ROOK_CURRENT_NAMESPACE_ONLY
                             name: ocs-operator-config
+                      - name: ROOK_CSI_ENABLE_CEPHFS
+                        valueFrom:
+                          configMapKeyRef:
+                            key: ROOK_CSI_ENABLE_CEPHFS
+                            name: ocs-operator-config
                       - name: ROOK_ALLOW_MULTIPLE_FILESYSTEMS
                         value: "false"
                       - name: ROOK_LOG_LEVEL
