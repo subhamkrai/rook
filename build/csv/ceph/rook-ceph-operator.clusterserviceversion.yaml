@@ -3003,6 +3003,22 @@ spec:
                 - get
                 - list
                 - watch
+            - apiGroups:
+                - replication.storage.openshift.io
+              resources:
+                - volumegroupreplicationcontents
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - replication.storage.openshift.io
+              resources:
+                - volumegroupreplicationclasses
+              verbs:
+                - get
+                - list
+                - watch
           serviceAccountName: rook-csi-rbd-provisioner-sa
         - rules:
             - verbs:
