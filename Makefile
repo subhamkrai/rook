@@ -149,10 +149,6 @@ check test: ## Runs unit tests.
 test-integration: ## Runs integration tests.
 	@$(MAKE) go.test.integration
 
-lint: ## Check syntax and styling of go sources.
-	@$(MAKE) go.init
-	@$(MAKE) go.lint
-
 vet: ## Runs lint checks on go sources.
 	@$(MAKE) go.init
 	@$(MAKE) go.vet
@@ -160,6 +156,21 @@ vet: ## Runs lint checks on go sources.
 fmt: ## Check formatting of go sources.
 	@$(MAKE) go.init
 	@$(MAKE) go.fmt
+
+.PHONY: yamllint
+yamllint:
+	yamllint -c .yamllint deploy/examples/ --no-warnings
+
+.PHONY: lint
+lint: yamllint pylint shellcheck vet ## Run various linters
+
+.PHONY: pylint
+pylint:
+	pylint $(shell find $(ROOT_DIR) -name '*.py') -E
+
+.PHONY: shellcheck
+shellcheck:
+	shellcheck --severity=warning --format=gcc --shell=bash $(shell find $(ROOT_DIR) -type f -name '*.sh') build/reset build/sed-in-place
 
 gen.codegen: codegen
 codegen: ${CODE_GENERATOR} ## Run code generators.
@@ -208,6 +219,7 @@ gen-rbac: $(HELM) $(YQ) ## Generate RBAC from Helm charts
 
 gen.docs: docs
 docs: helm-docs
+gen.helm-docs: helm-docs
 helm-docs: $(HELM_DOCS) ## Use helm-docs to generate documentation from helm charts
 	$(HELM_DOCS) -c deploy/charts/rook-ceph \
 		-o ../../../Documentation/Helm-Charts/operator-chart.md \
@@ -217,17 +229,6 @@ helm-docs: $(HELM_DOCS) ## Use helm-docs to generate documentation from helm cha
 		-o ../../../Documentation/Helm-Charts/ceph-cluster-chart.md \
 		-t ../../../Documentation/Helm-Charts/ceph-cluster-chart.gotmpl.md \
 		-t ../../../Documentation/Helm-Charts/_templates.gotmpl
-
-check.helm-docs:
-	@$(MAKE) helm-docs
-	@git diff --exit-code || { \
-	echo "Please run 'make helm-docs' locally, commit the updated docs, and push the change. See https://rook.io/docs/rook/latest/Contributing/documentation/#making-docs" ; \
-	exit 2 ; \
-	};
-check.docs:
-	@$(MAKE) docs
-	@tests/scripts/validate_modified_files.sh docs
-
 
 docs-preview: ## Preview the documentation through mkdocs
 	mkdocs serve
@@ -243,7 +244,7 @@ generate: gen.codegen gen.crds gen.rbac gen.docs gen.crd-docs ## Update all gene
 
 
 .PHONY: all build.common
-.PHONY: build build.all install test check vet fmt codegen gen.codegen gen.rbac gen.crds gen.crd-docs gen.docs generate mod.check clean distclean prune
+.PHONY: build build.all install test check vet fmt codegen gen.codegen gen.rbac gen.crds gen.crd-docs gen.docs gen.helm-docs generate mod.check clean distclean prune
 
 # ====================================================================================
 # Help

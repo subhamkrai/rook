@@ -11,6 +11,7 @@ BUILD_ERR="changes found by make build', please commit your go.sum or other chan
 HELM_ERR="changes found by 'make gen-rbac'. please run 'make gen-rbac' locally and update your PR"
 CSV_ERR="changes found by make gen-csv',please run 'make gen-csv' locally and update your PR"
 DOCS_ERR="changes found by 'make docs'. please run 'make docs' locally and update your PR"
+HELM_DOCS_ERR="changes found by 'make helm-docs'. please run 'make helm-docs' locally and update your PR"
 
 #############
 # FUNCTIONS #
@@ -37,6 +38,9 @@ docs)
 codegen)
   validate "$CODEGEN_ERR"
   ;;
+helm-docs)
+  validate "$HELM_DOCS_ERR"
+  ;;
 modcheck)
   validate "$MOD_ERR"
   ;;
@@ -53,7 +57,6 @@ gen-csv)
   validate "$CSV_ERR"
   ;;
 *)
-  echo $"Usage: $0 {docs|codegen|modcheck|crd|build|gen-rbac}"
+  echo $"Usage: $0 {docs|helm-docs|codegen|modcheck|crd|build|gen-rbac}"
   exit 1
-  ;;
 esac
