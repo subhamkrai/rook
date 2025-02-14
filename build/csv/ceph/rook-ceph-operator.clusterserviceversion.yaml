@@ -951,6 +951,12 @@ spec:
                 - serviceaccounts/token
               verbs:
                 - create
+            - apiGroups:
+                - authentication.k8s.io
+              resources:
+                - tokenreviews
+              verbs:
+                - create
           serviceAccountName: rook-csi-cephfs-provisioner-sa
         - rules:
             - apiGroups:
@@ -1135,6 +1141,12 @@ spec:
                 - nodes
               verbs:
                 - get
+            - apiGroups:
+                - authentication.k8s.io
+              resources:
+                - tokenreviews
+              verbs:
+                - create
           serviceAccountName: rook-csi-rbd-plugin-sa
         - rules:
             - apiGroups:
@@ -1321,6 +1333,12 @@ spec:
                 - get
                 - list
                 - watch
+            - apiGroups:
+                - authentication.k8s.io
+              resources:
+                - tokenreviews
+              verbs:
+                - create
           serviceAccountName: rook-csi-rbd-provisioner-sa
         - rules:
             - verbs:
@@ -1787,12 +1805,6 @@ spec:
                 - daemonsets/finalizers
               verbs:
                 - update
-            - apiGroups:
-                - authentication.k8s.io
-              resources:
-                - tokenreviews
-              verbs:
-                - create
           serviceAccountName: rook-csi-cephfs-provisioner-sa
         - rules:
             - apiGroups:
@@ -1823,12 +1835,6 @@ spec:
                 - daemonsets/finalizers
               verbs:
                 - update
-            - apiGroups:
-                - authentication.k8s.io
-              resources:
-                - tokenreviews
-              verbs:
-                - create
           serviceAccountName: rook-csi-rbd-plugin-sa
         - rules:
             - apiGroups:
@@ -1870,12 +1876,6 @@ spec:
                 - daemonsets/finalizers
               verbs:
                 - update
-            - apiGroups:
-                - authentication.k8s.io
-              resources:
-                - tokenreviews
-              verbs:
-                - create
           serviceAccountName: rook-csi-rbd-provisioner-sa
     strategy: deployment
   installModes:
