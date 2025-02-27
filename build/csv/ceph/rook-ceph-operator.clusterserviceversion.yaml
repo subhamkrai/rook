@@ -3455,6 +3455,8 @@ spec:
                 - csiaddonsnodes
               verbs:
                 - get
+                - watch
+                - list
                 - create
                 - update
                 - delete
@@ -3485,6 +3487,8 @@ spec:
                 - csiaddonsnodes
               verbs:
                 - get
+                - watch
+                - list
                 - create
                 - update
                 - delete
@@ -3526,6 +3530,8 @@ spec:
                 - csiaddonsnodes
               verbs:
                 - get
+                - watch
+                - list
                 - create
                 - update
                 - delete
