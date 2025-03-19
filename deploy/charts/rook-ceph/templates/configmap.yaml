@@ -15,6 +15,9 @@ data:
 {{- if .Values.obcProvisionerNamePrefix }}
   ROOK_OBC_PROVISIONER_NAME_PREFIX: {{ .Values.obcProvisionerNamePrefix | quote }}
 {{- end }}
+{{- if .Values.obcAllowAdditionalConfigFields }}
+  ROOK_OBC_ALLOW_ADDITIONAL_CONFIG_FIELDS: {{ .Values.obcAllowAdditionalConfigFields | quote }}
+{{- end }}
   ROOK_CEPH_ALLOW_LOOP_DEVICES: {{ .Values.allowLoopDevices | quote }}
   ROOK_ENABLE_DISCOVERY_DAEMON: {{ .Values.enableDiscoveryDaemon | quote }}
 {{- if .Values.discoverDaemonUdev }}
@@ -204,6 +207,12 @@ data:
 {{- end }}
 {{- if .Values.csi.csiAddonsPort }}
   CSIADDONS_PORT: {{ .Values.csi.csiAddonsPort | quote }}
+{{- end }}
+{{- if .Values.csi.csiAddonsRBDProvisionerPort }}
+  CSIADDONS_RBD_PROVISIONER_PORT: {{ .Values.csi.csiAddonsRBDProvisionerPort | quote }}
+{{- end }}
+{{- if .Values.csi.csiAddonsCephFSProvisionerPort }}
+  CSIADDONS_CEPHFS_PROVISIONER_PORT: {{ .Values.csi.csiAddonsCephFSProvisionerPort | quote }}
 {{- end }}
 {{- if .Values.csi.forceCephFSKernelClient }}
   CSI_FORCE_CEPHFS_KERNEL_CLIENT: {{ .Values.csi.forceCephFSKernelClient | quote }}

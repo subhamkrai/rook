@@ -189,7 +189,7 @@ data:
   # The default version of CSI supported by Rook will be started. To change the version
   # of the CSI driver to something other than what is officially supported, change
   # these images to the desired release of the CSI driver.
-  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.13.0"
+  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.13.1"
   # ROOK_CSI_REGISTRAR_IMAGE: "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0"
   # ROOK_CSI_RESIZER_IMAGE: "registry.k8s.io/sig-storage/csi-resizer:v1.13.1"
   # ROOK_CSI_PROVISIONER_IMAGE: "registry.k8s.io/sig-storage/csi-provisioner:v5.1.0"
@@ -541,6 +541,12 @@ data:
   # Custom prefix value for the OBC provisioner instead of ceph cluster namespace, do not set on existing cluster
   # ROOK_OBC_PROVISIONER_NAME_PREFIX: "custom-prefix"
 
+  # Many OBC additional config fields may be risky for administrators to allow users control over.
+  # The safe and default-allowed fields are 'maxObjects' and 'maxSize'.
+  # Other fields should be considered risky. To allow all additional configs, use this value:
+  #   "maxObjects,maxSize,bucketMaxObjects,bucketMaxSize,bucketPolicy,bucketLifecycle,bucketOwner"
+  # ROOK_OBC_ALLOW_ADDITIONAL_CONFIG_FIELDS: "maxObjects,maxSize" # default allowed configs
+
   # Whether to start the discovery daemon to watch for raw storage devices on nodes in the cluster.
   # This daemon does not need to run if you are only going to create your OSDs based on StorageClassDeviceSets with PVCs.
   ROOK_ENABLE_DISCOVERY_DAEMON: "false"
@@ -550,7 +556,7 @@ data:
   CSI_ENABLE_CSIADDONS: "false"
   # Enable watch for faster recovery from rbd rwo node loss
   ROOK_WATCH_FOR_NODE_FAILURE: "true"
-  # ROOK_CSIADDONS_IMAGE: "quay.io/csiaddons/k8s-sidecar:v0.11.0"
+  # ROOK_CSIADDONS_IMAGE: "quay.io/csiaddons/k8s-sidecar:v0.12.0"
   # The GCSI RPC timeout value (in seconds). It should be >= 120. If this variable is not set or is an invalid value, it's default to 150.
   CSI_GRPC_TIMEOUT_SECONDS: "150"
 

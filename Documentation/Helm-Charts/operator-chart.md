@@ -60,14 +60,16 @@ The following table lists the configurable parameters of the rook-operator chart
 | `csi.cephFSPluginUpdateStrategy` | CSI CephFS plugin daemonset update strategy, supported values are OnDelete and RollingUpdate | `RollingUpdate` |
 | `csi.cephFSPluginUpdateStrategyMaxUnavailable` | A maxUnavailable parameter of CSI cephFS plugin daemonset update strategy. | `1` |
 | `csi.cephcsi.repository` | Ceph CSI image repository | `"quay.io/cephcsi/cephcsi"` |
-| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.13.0"` |
+| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.13.1"` |
 | `csi.cephfsLivenessMetricsPort` | CSI CephFS driver metrics port | `9081` |
 | `csi.cephfsPodLabels` | Labels to add to the CSI CephFS Deployments and DaemonSets Pods | `nil` |
 | `csi.clusterName` | Cluster name identifier to set as metadata on the CephFS subvolume and RBD images. This will be useful in cases like for example, when two container orchestrator clusters (Kubernetes/OCP) are using a single ceph cluster | `nil` |
 | `csi.csiAddons.enabled` | Enable CSIAddons | `false` |
 | `csi.csiAddons.repository` | CSIAddons sidecar image repository | `"quay.io/csiaddons/k8s-sidecar"` |
-| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.11.0"` |
+| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.12.0"` |
+| `csi.csiAddonsCephFSProvisionerPort` | CSI Addons server port for the Ceph FS provisioner | `9070` |
 | `csi.csiAddonsPort` | CSI Addons server port | `9070` |
+| `csi.csiAddonsRBDProvisionerPort` | CSI Addons server port for the RBD provisioner | `9070` |
 | `csi.csiCephFSPluginResource` | CEPH CSI CephFS plugin resource requirement list | see values.yaml |
 | `csi.csiCephFSPluginVolume` | The volume of the CephCSI CephFS plugin DaemonSet | `nil` |
 | `csi.csiCephFSPluginVolumeMount` | The volume mounts of the CephCSI CephFS plugin DaemonSet | `nil` |
@@ -157,7 +159,9 @@ The following table lists the configurable parameters of the rook-operator chart
 | `logLevel` | Global log level for the operator. Options: `ERROR`, `WARNING`, `INFO`, `DEBUG` | `"INFO"` |
 | `monitoring.enabled` | Enable monitoring. Requires Prometheus to be pre-installed. Enabling will also create RBAC rules to allow Operator to create ServiceMonitors | `false` |
 | `nodeSelector` | Kubernetes [`nodeSelector`](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) to add to the Deployment. | `{}` |
+| `obcAllowAdditionalConfigFields` | Many OBC additional config fields may be risky for administrators to allow users control over. The safe and default-allowed fields are 'maxObjects' and 'maxSize'. Other fields should be considered risky. To allow all additional configs, use this value:   "maxObjects,maxSize,bucketMaxObjects,bucketMaxSize,bucketPolicy,bucketLifecycle,bucketOwner" | "maxObjects,maxSize" |
 | `obcProvisionerNamePrefix` | Specify the prefix for the OBC provisioner in place of the cluster namespace | `ceph cluster namespace` |
+| `operatorPodLabels` | Custom pod labels for the operator | `{}` |
 | `priorityClassName` | Set the priority class for the rook operator deployment if desired | `nil` |
 | `pspEnable` | If true, create & use PSP resources | `false` |
 | `rbacAggregate.enableOBCs` | If true, create a ClusterRole aggregated to [user facing roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles) for objectbucketclaims | `false` |
