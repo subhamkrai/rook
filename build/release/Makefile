@@ -59,25 +59,27 @@ REMOTE_NAME ?= origin
 
 PLATFORMS ?= $(ALL_PLATFORMS)
 
+# "helm" flavor is for pushing to s3/https endpoint
+# "charts" flavor is for pushing to oci endpoint
 ifneq ($(filter master release-%,$(BRANCH_NAME)),)
-FLAVORS ?= output images docs helm
+FLAVORS ?= output images docs helm charts
 else
 FLAVORS ?= output
 override BRANCH_NAME := pr/$(BRANCH_NAME)
 endif
 
-DOCKER_REGISTRY ?= docker.io/rook
-QUAY_REGISTRY ?= quay.io/rook
-GHCR_REGISTRY ?= ghcr.io/rook
+DOCKER_REGISTRY ?= docker.io/subham03
+QUAY_REGISTRY ?= quay.io/skrai
+GHCR_REGISTRY ?= ghcr.io/subhamkrai
 REGISTRIES ?= $(DOCKER_REGISTRY) $(QUAY_REGISTRY) $(GHCR_REGISTRY)
 IMAGE_ARCHS := $(subst linux_,,$(filter linux_%,$(PLATFORMS)))
 IMAGE_PLATFORMS := $(subst _,/,$(subst $(SPACE),$(COMMA),$(filter linux_%,$(PLATFORMS))))
 IMAGE_PLATFORMS_COMMA := $(shell echo "$(IMAGE_PLATFORMS)" | sed 's/ /,/g' | sed 's/.$$//')
 
-S3_BUCKET ?= rook.releases
-S3_CP := aws s3 cp --only-show-errors
-S3_SYNC := aws s3 sync --only-show-errors
-S3_SYNC_DEL := aws s3 sync --only-show-errors --delete
+# S3_BUCKET ?= rook.releases
+# S3_CP := aws s3 cp --only-show-errors
+# S3_SYNC := aws s3 sync --only-show-errors
+# S3_SYNC_DEL := aws s3 sync --only-show-errors --delete
 
 # ====================================================================================
 # tools
@@ -156,14 +158,49 @@ promote.helm: $(HELM)
 	$(S3_SYNC_DEL) $(HELM_TEMP) s3://$(HELM_S3_BUCKET)/$(CHANNEL)
 	rm -fr $(HELM_TEMP)
 
+# set the version number. you should not need to do this
+# for the majority of scenarios.
+# helm has very specific requirements to be semver 2.0 so
+# have to replace the third "." with a "-" to have helm be happy
+ifeq ($(origin HELM_CHART_VERSION), undefined)
+HELM_CHART_VERSION := $(shell echo "$(VERSION)" | sed 's/\./-/3' )
+endif
+export HELM_CHART_VERSION
+
+define chart.build
+build.chart.$(1):
+	@echo === update helm version
+	$(SED_IN_PLACE) 's|appVersion: 0.0.1|appVersion: $(VERSION)|g' $(ROOT_DIR)/deploy/charts/$(1)/Chart.yaml
+	$(SED_IN_PLACE) 's|0.0.1|$(HELM_CHART_VERSION)|g' $(ROOT_DIR)/deploy/charts/$(1)/Chart.yaml
+	@echo === helm package $(1)
+	mkdir -p $(OUTPUT_DIR)/charts/$(1)
+	$(HELM) package $(ROOT_DIR)/deploy/charts/$(1) --destination $(OUTPUT_DIR)/charts/$(1)
+	@echo === revert helm version
+	$(SED_IN_PLACE) 's|appVersion: $(VERSION)|appVersion: 0.0.1|g' $(ROOT_DIR)/deploy/charts/$(1)/Chart.yaml
+	$(SED_IN_PLACE) 's|$(HELM_CHART_VERSION)|0.0.1|g' $(ROOT_DIR)/deploy/charts/$(1)/Chart.yaml
+build.all.charts: build.chart.$(1)
+endef
+$(foreach c,$(HELM_CHARTS),$(eval $(call chart.build,$(c))))
+
+define chart.targets
+publish.chart.$(1).$(2):
+	@echo === helm push $(2) to $(1)
+	$(HELM) push $(OUTPUT_DIR)/charts/$(2)/$(2)-$(HELM_CHART_VERSION).tgz oci://$(1)
+publish.all.charts: publish.chart.$(1).$(2)
+clean.chart.$(1).$(2):
+	@rm -fr $(OUTPUT_DIR).$(2)
+clean.all.charts: clean.chart.$(1).$(2)
+endef
+$(foreach r,$(REGISTRIES), $(foreach c,$(HELM_CHARTS),$(eval $(call chart.targets,$(r),$(c)))))
+
 # ====================================================================================
 # output
 
-publish.output:
-	$(S3_SYNC_DEL) $(OUTPUT_DIR) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)
-promote.output:
-	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(CHANNEL)/$(VERSION)
-	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(CHANNEL)/current
+# publish.output:
+# 	$(S3_SYNC_DEL) $(OUTPUT_DIR) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)
+# promote.output:
+# 	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(CHANNEL)/$(VERSION)
+# 	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(CHANNEL)/current
 
 # ====================================================================================
 # images
@@ -206,6 +243,12 @@ build.images: build.all.images
 publish.images: $(addprefix publish.manifest.image.,$(IMAGES))
 promote.images: $(addprefix promote.manifest.image.,$(IMAGES))
 clean.images: clean.all.images
+
+build.charts: build.all.charts
+publish.charts: publish.all.charts
+promote.charts:
+	@echo === charts are already promoted
+clean.charts: clean.all.charts
 
 # ====================================================================================
 # Help

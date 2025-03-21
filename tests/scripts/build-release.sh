@@ -7,7 +7,7 @@ set -ex
 
 MAKE='make --debug=v --output-sync'
 
-function  build() {
+function build() {
     $MAKE build.all
     # quick check that go modules are tidied
     $MAKE mod.check
@@ -18,13 +18,13 @@ function publish() {
     $MAKE -C build/release build BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=${TAG_WITH_SUFFIX} GIT_API_TOKEN=${GIT_API_TOKEN}
     git status &
     git diff &
-    $MAKE -C build/release publish BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=${TAG_WITH_SUFFIX} AWS_ACCESS_KEY_ID=${AWS_USR} AWS_SECRET_ACCESS_KEY=${AWS_PSW} GIT_API_TOKEN=${GIT_API_TOKEN}
+    $MAKE -C build/release publish BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=${TAG_WITH_SUFFIX}
 }
 
 function promote() {
     # automatically promote the master builds
     echo "Promoting from branch ${BRANCH_NAME}"
-    $MAKE -C build/release promote BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=${TAG_WITH_SUFFIX} CHANNEL=${CHANNEL} AWS_ACCESS_KEY_ID=${AWS_USR} AWS_SECRET_ACCESS_KEY=${AWS_PSW}
+    $MAKE -C build/release promote BRANCH_NAME=${BRANCH_NAME} TAG_WITH_SUFFIX=${TAG_WITH_SUFFIX} CHANNEL=${CHANNEL}
 }
 
 #############
@@ -70,9 +70,8 @@ else
     fi
 fi
 
-
 publish
 
 if [[ "$SHOULD_PROMOTE" = true ]]; then
-  promote
+    promote
 fi
