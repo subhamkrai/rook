@@ -24,10 +24,12 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	cephver "github.com/rook/rook/pkg/operator/ceph/version"
+	"github.com/rook/rook/pkg/operator/k8sutil"
 	"github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func newConfig(t *testing.T) *clusterConfig {
@@ -43,7 +45,8 @@ func newConfig(t *testing.T) *clusterConfig {
 		store: &cephv1.CephObjectStore{
 			Spec: cephv1.ObjectStoreSpec{
 				Gateway: cephv1.GatewaySpec{},
-			}},
+			},
+		},
 		clusterInfo: clusterInfo,
 		clusterSpec: clusterSpec,
 		context:     &clusterd.Context{Clientset: test.New(t, 3)},
@@ -154,7 +157,8 @@ func Test_clusterConfig_generateMonConfigOptions(t *testing.T) {
 			Gateway: cephv1.GatewaySpec{
 				DisableMultisiteSyncTraffic: true,
 				RgwConfig:                   map[string]string{"one": "add", "rgw_enable_usage_log": "false"},
-				RgwCommandFlags:             map[string]string{"two": "add", "rgw_zone": "bob"}},
+				RgwCommandFlags:             map[string]string{"two": "add", "rgw_zone": "bob"},
+			},
 		}, overlayOnDefaultConfigs("rgw_run_sync_thread", "false", "one", "add", "rgw_enable_usage_log", "false"), false},
 	}
 	for _, tt := range tests {
@@ -208,6 +212,7 @@ func TestRgwConfigFromSecret(t *testing.T) {
 		store:       objectStore,
 		context:     objContext.Context,
 		clusterInfo: objContext.clusterInfo,
+		ownerInfo:   k8sutil.NewOwnerInfo(objectStore, runtime.NewScheme()),
 	}
 
 	rgwConfig := &rgwConfig{}
