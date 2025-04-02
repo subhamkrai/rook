@@ -115,6 +115,10 @@ spec:
                       enabled:
                         type: boolean
                       mode:
+                        enum:
+                        - pool
+                        - image
+                        - init-only
                         type: string
                       peers:
                         nullable: true
@@ -1049,6 +1053,17 @@ spec:
                     type: integer
                   priorityClassName:
                     type: string
+                  readAffinity:
+                    properties:
+                      type:
+                        enum:
+                        - localize
+                        - balance
+                        - default
+                        type: string
+                    required:
+                    - type
+                    type: object
                   resources:
                     nullable: true
                     properties:
@@ -1376,6 +1391,10 @@ spec:
                       enabled:
                         type: boolean
                       mode:
+                        enum:
+                        - pool
+                        - image
+                        - init-only
                         type: string
                       peers:
                         nullable: true
