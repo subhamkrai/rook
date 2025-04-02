@@ -1087,7 +1087,8 @@ type MirroringSpec struct {
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
 
-	// Mode is the mirroring mode: either pool or image
+	// Mode is the mirroring mode: pool, image or init-only.
+	// +kubebuilder:validation:Enum=pool;image;init-only
 	// +optional
 	Mode string `json:"mode,omitempty"`
 
@@ -1770,6 +1771,21 @@ type GatewaySpec struct {
 	// +nullable
 	// +optional
 	RgwCommandFlags map[string]string `json:"rgwCommandFlags,omitempty"`
+
+	// ReadAffinity defines the RGW read affinity policy to optimize the read requests for the RGW clients
+	// Note: Only supported from Ceph Tentacle (v20)
+	// +optional
+	ReadAffinity *RgwReadAffinity `json:"readAffinity,omitempty"`
+}
+
+type RgwReadAffinity struct {
+	// Type defines the RGW ReadAffinity type
+	// localize: read from the nearest OSD based on crush location of the RGW client
+	// balance: picks a random OSD from the PG's active set
+	// default: read from the primary OSD
+	// +kubebuilder:validation:Enum=localize;balance;default
+	// +required
+	Type string `json:"type"`
 }
 
 // RGWLoggingSpec is intended to extend the s3/swift logging for client operations
@@ -2349,6 +2365,11 @@ type KafkaEndpointSpec struct {
 	// +kubebuilder:default=broker
 	// +optional
 	AckLevel string `json:"ackLevel,omitempty"`
+	// The authentication mechanism for this topic (PLAIN/SCRAM-SHA-512/SCRAM-SHA-256/GSSAPI/OAUTHBEARER)
+	// +kubebuilder:validation:Enum=PLAIN;SCRAM-SHA-512;SCRAM-SHA-256;GSSAPI;OAUTHBEARER
+	// +kubebuilder:default=PLAIN
+	// +optional
+	Mechanism string `json:"mechanism,omitempty"`
 }
 
 // +genclient
@@ -2854,10 +2875,7 @@ type DisruptionManagementSpec struct {
 	// +optional
 	OSDMaintenanceTimeout time.Duration `json:"osdMaintenanceTimeout,omitempty"`
 
-	// PGHealthCheckTimeout is the time (in minutes) that the operator will wait for the placement groups to become
-	// healthy (active+clean) after a drain was completed and OSDs came back up. Rook will continue with the next drain
-	// if the timeout exceeds. It only works if managePodBudgets is true.
-	// No values or 0 means that the operator will wait until the placement groups are healthy before unblocking the next drain.
+	// DEPRECATED: PGHealthCheckTimeout is no longer implemented
 	// +optional
 	PGHealthCheckTimeout time.Duration `json:"pgHealthCheckTimeout,omitempty"`
 
@@ -3432,7 +3450,7 @@ type RadosNamespaceMirroring struct {
 	// RemoteNamespace is the name of the CephBlockPoolRadosNamespace on the secondary cluster CephBlockPool
 	// +optional
 	RemoteNamespace *string `json:"remoteNamespace"`
-	// Mode is the mirroring mode; either pool or image
+	// Mode is the mirroring mode; either pool or image.
 	// +kubebuilder:validation:Enum="";pool;image
 	Mode RadosNamespaceMirroringMode `json:"mode"`
 	// SnapshotSchedules is the scheduling of snapshot for mirrored images

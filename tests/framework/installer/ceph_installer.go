@@ -214,7 +214,6 @@ func (h *CephInstaller) Execute(command string, parameters []string, namespace s
 
 // CreateCephCluster creates rook cluster via kubectl
 func (h *CephInstaller) CreateCephCluster() error {
-
 	ctx := context.TODO()
 	var err error
 	h.settings.DataDirHostPath, err = h.initTestDir(h.settings.Namespace)
@@ -272,10 +271,6 @@ func (h *CephInstaller) CreateCephCluster() error {
 
 func (h *CephInstaller) waitForCluster() error {
 	monWaitLabel := "app=rook-ceph-mon,mon_daemon=true"
-	if h.Manifests.Settings().RookVersion == Version1_15 {
-		// TODO: Remove this when upgrade test is from v1.15.7 since prior releases do not have the mon_daemon label
-		monWaitLabel = "app=rook-ceph-mon"
-	}
 	if err := h.k8shelper.WaitForPodCount(monWaitLabel, h.settings.Namespace, h.settings.Mons); err != nil {
 		return err
 	}
@@ -441,7 +436,7 @@ func (h *CephInstaller) initTestDir(namespace string) (string, error) {
 	// skip the test dir creation if we are not running under "/data"
 	if val != "/data" {
 		// Create the test dir on the local host
-		if err := os.MkdirAll(testDir, 0777); err != nil {
+		if err := os.MkdirAll(testDir, 0o777); err != nil {
 			return "", err
 		}
 
@@ -473,7 +468,7 @@ func (h *CephInstaller) GetNodeHostnames() ([]string, error) {
 }
 
 func (h *CephInstaller) InstallCSIOperator() error {
-	if h.settings.RookVersion == Version1_15 {
+	if h.settings.RookVersion == Version1_16 {
 		logger.Infof("Skipping the CSI operator installation for previous version of Rook")
 		return nil
 	}
@@ -919,7 +914,7 @@ func (h *CephInstaller) checkCephHealthStatus() {
 
 	// The health status is not stable enough for the integration tests to rely on.
 	// We should enable this check if we can get the ceph status to be stable despite all the changing configurations performed by rook.
-	//assert.Equal(h.T(), "HEALTH_OK", clusterResource.Status.CephStatus.Health)
+	// assert.Equal(h.T(), "HEALTH_OK", clusterResource.Status.CephStatus.Health)
 	assert.NotEqual(h.T(), "", clusterResource.Status.CephStatus.LastChecked)
 
 	// Print the details if the health is not ok
@@ -959,7 +954,6 @@ func (h *CephInstaller) GatherAllRookLogs(testName string, namespaces ...string)
 
 // NewCephInstaller creates new instance of CephInstaller
 func NewCephInstaller(t func() *testing.T, clientset *kubernetes.Clientset, settings *TestCephSettings) *CephInstaller {
-
 	// By default set a cluster name that is different from the namespace so we don't rely on the namespace
 	// in expected places
 	if settings.ClusterName == "" {

@@ -78,6 +78,15 @@ spec:
                         type: string
                       disableVerifySSL:
                         type: boolean
+                      mechanism:
+                        default: PLAIN
+                        enum:
+                        - PLAIN
+                        - SCRAM-SHA-512
+                        - SCRAM-SHA-256
+                        - GSSAPI
+                        - OAUTHBEARER
+                        type: string
                       uri:
                         minLength: 1
                         type: string

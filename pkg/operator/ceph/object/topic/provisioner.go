@@ -176,6 +176,7 @@ func createTopicAttributes(topic *cephv1.CephBucketTopic) map[string]*string {
 		attr["kafka-ack-level"] = &topic.Spec.Endpoint.Kafka.AckLevel
 		verifySSL = strconv.FormatBool(!topic.Spec.Endpoint.Kafka.DisableVerifySSL)
 		attr["verify-ssl"] = &verifySSL
+		attr["mechanism"] = &topic.Spec.Endpoint.Kafka.Mechanism
 	}
 
 	return attr
@@ -195,7 +196,6 @@ func createTopic(p provisioner, topic *cephv1.CephBucketTopic) (*string, error) 
 		Name:       &topic.Name,
 		Attributes: createTopicAttributes(topic),
 	})
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to provision CephBucketTopic %q", nsName)
 	}
@@ -223,7 +223,6 @@ func deleteTopic(p provisioner, topic *cephv1.CephBucketTopic) error {
 	}
 
 	_, err = snsClient.DeleteTopic(&sns.DeleteTopicInput{TopicArn: topic.Status.ARN})
-
 	if err != nil {
 		if err.(awserr.Error).Code() != sns.ErrCodeNotFoundException {
 			return errors.Wrapf(err, "failed to delete CephBucketTopic %q", nsName)

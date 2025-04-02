@@ -67,7 +67,7 @@ spec:
                   description: Mirroring configuration of CephBlockPoolRadosNamespace
                   properties:
                     mode:
-                      description: Mode is the mirroring mode; either pool or image
+                      description: Mode is the mirroring mode; either pool or image.
                       enum:
                         - ""
                         - pool
@@ -390,7 +390,11 @@ spec:
                       description: Enabled whether this pool is mirrored or not
                       type: boolean
                     mode:
-                      description: 'Mode is the mirroring mode: either pool or image'
+                      description: 'Mode is the mirroring mode: pool, image or init-only.'
+                      enum:
+                        - pool
+                        - image
+                        - init-only
                       type: string
                     peers:
                       description: Peers represents the peers spec
@@ -960,6 +964,16 @@ spec:
                         disableVerifySSL:
                           description: Indicate whether the server certificate is validated by the client or not
                           type: boolean
+                        mechanism:
+                          default: PLAIN
+                          description: The authentication mechanism for this topic (PLAIN/SCRAM-SHA-512/SCRAM-SHA-256/GSSAPI/OAUTHBEARER)
+                          enum:
+                            - PLAIN
+                            - SCRAM-SHA-512
+                            - SCRAM-SHA-256
+                            - GSSAPI
+                            - OAUTHBEARER
+                          type: string
                         uri:
                           description: The URI of the Kafka endpoint to push notification to
                           minLength: 1
@@ -1340,11 +1354,7 @@ spec:
                       format: int64
                       type: integer
                     pgHealthCheckTimeout:
-                      description: |-
-                        PGHealthCheckTimeout is the time (in minutes) that the operator will wait for the placement groups to become
-                        healthy (active+clean) after a drain was completed and OSDs came back up. Rook will continue with the next drain
-                        if the timeout exceeds. It only works if managePodBudgets is true.
-                        No values or 0 means that the operator will wait until the placement groups are healthy before unblocking the next drain.
+                      description: 'DEPRECATED: PGHealthCheckTimeout is no longer implemented'
                       format: int64
                       type: integer
                     pgHealthyRegex:
@@ -7012,7 +7022,11 @@ spec:
                             description: Enabled whether this pool is mirrored or not
                             type: boolean
                           mode:
-                            description: 'Mode is the mirroring mode: either pool or image'
+                            description: 'Mode is the mirroring mode: pool, image or init-only.'
+                            enum:
+                              - pool
+                              - image
+                              - init-only
                             type: string
                           peers:
                             description: Peers represents the peers spec
@@ -7196,7 +7210,11 @@ spec:
                           description: Enabled whether this pool is mirrored or not
                           type: boolean
                         mode:
-                          description: 'Mode is the mirroring mode: either pool or image'
+                          description: 'Mode is the mirroring mode: pool, image or init-only.'
+                          enum:
+                            - pool
+                            - image
+                            - init-only
                           type: string
                         peers:
                           description: Peers represents the peers spec
@@ -10848,7 +10866,11 @@ spec:
                           description: Enabled whether this pool is mirrored or not
                           type: boolean
                         mode:
-                          description: 'Mode is the mirroring mode: either pool or image'
+                          description: 'Mode is the mirroring mode: pool, image or init-only.'
+                          enum:
+                            - pool
+                            - image
+                            - init-only
                           type: string
                         peers:
                           description: Peers represents the peers spec
@@ -11873,6 +11895,25 @@ spec:
                     priorityClassName:
                       description: PriorityClassName sets priority classes on the rgw pods
                       type: string
+                    readAffinity:
+                      description: |-
+                        ReadAffinity defines the RGW read affinity policy to optimize the read requests for the RGW clients
+                        Note: Only supported from Ceph Tentacle (v20)
+                      properties:
+                        type:
+                          description: |-
+                            Type defines the RGW ReadAffinity type
+                            localize: read from the nearest OSD based on crush location of the RGW client
+                            balance: picks a random OSD from the PG's active set
+                            default: read from the primary OSD
+                          enum:
+                            - localize
+                            - balance
+                            - default
+                          type: string
+                      required:
+                        - type
+                      type: object
                     resources:
                       description: The resource requirements for the rgw pods
                       nullable: true
@@ -12425,7 +12466,11 @@ spec:
                           description: Enabled whether this pool is mirrored or not
                           type: boolean
                         mode:
-                          description: 'Mode is the mirroring mode: either pool or image'
+                          description: 'Mode is the mirroring mode: pool, image or init-only.'
+                          enum:
+                            - pool
+                            - image
+                            - init-only
                           type: string
                         peers:
                           description: Peers represents the peers spec
@@ -13271,7 +13316,11 @@ spec:
                           description: Enabled whether this pool is mirrored or not
                           type: boolean
                         mode:
-                          description: 'Mode is the mirroring mode: either pool or image'
+                          description: 'Mode is the mirroring mode: pool, image or init-only.'
+                          enum:
+                            - pool
+                            - image
+                            - init-only
                           type: string
                         peers:
                           description: Peers represents the peers spec
@@ -13450,7 +13499,11 @@ spec:
                           description: Enabled whether this pool is mirrored or not
                           type: boolean
                         mode:
-                          description: 'Mode is the mirroring mode: either pool or image'
+                          description: 'Mode is the mirroring mode: pool, image or init-only.'
+                          enum:
+                            - pool
+                            - image
+                            - init-only
                           type: string
                         peers:
                           description: Peers represents the peers spec

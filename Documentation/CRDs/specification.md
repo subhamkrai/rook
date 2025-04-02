@@ -5766,10 +5766,7 @@ time.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>PGHealthCheckTimeout is the time (in minutes) that the operator will wait for the placement groups to become
-healthy (active+clean) after a drain was completed and OSDs came back up. Rook will continue with the next drain
-if the timeout exceeds. It only works if managePodBudgets is true.
-No values or 0 means that the operator will wait until the placement groups are healthy before unblocking the next drain.</p>
+<p>DEPRECATED: PGHealthCheckTimeout is no longer implemented</p>
 </td>
 </tr>
 <tr>
@@ -7233,6 +7230,21 @@ This feature is intended for advanced users. It allows breaking configurations t
 applied. Use with caution.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>readAffinity</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.RgwReadAffinity">
+RgwReadAffinity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReadAffinity defines the RGW read affinity policy to optimize the read requests for the RGW clients
+Note: Only supported from Ceph Tentacle (v20)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ceph.rook.io/v1.HTTPEndpointSpec">HTTPEndpointSpec
@@ -7492,6 +7504,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>The ack level required for this topic (none/broker)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>mechanism</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The authentication mechanism for this topic (PLAIN/SCRAM-SHA-512/SCRAM-SHA-256/GSSAPI/OAUTHBEARER)</p>
 </td>
 </tr>
 </tbody>
@@ -8414,7 +8438,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Mode is the mirroring mode: either pool or image</p>
+<p>Mode is the mirroring mode: pool, image or init-only.</p>
 </td>
 </tr>
 <tr>
@@ -11848,7 +11872,7 @@ RadosNamespaceMirroringMode
 </em>
 </td>
 <td>
-<p>Mode is the mirroring mode; either pool or image</p>
+<p>Mode is the mirroring mode; either pool or image.</p>
 </td>
 </tr>
 <tr>
@@ -12033,6 +12057,37 @@ HybridStorageSpec
 <div>
 <p>ResourceSpec is a collection of ResourceRequirements that describes the compute resource requirements</p>
 </div>
+<h3 id="ceph.rook.io/v1.RgwReadAffinity">RgwReadAffinity
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.GatewaySpec">GatewaySpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type defines the RGW ReadAffinity type
+localize: read from the nearest OSD based on crush location of the RGW client
+balance: picks a random OSD from the PG&rsquo;s active set
+default: read from the primary OSD</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.S3Spec">S3Spec
 </h3>
 <p>

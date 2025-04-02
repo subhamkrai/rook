@@ -257,7 +257,7 @@ func (m *MonStore) setAll(who string, settings map[string]string) ([]string, err
 		return []string{}, errors.Wrapf(err, "failed to create assimilateConf temp dir for  %s.", who)
 	}
 
-	err = os.WriteFile(assimilateConfPath.Name(), []byte(""), 0600)
+	err = os.WriteFile(assimilateConfPath.Name(), []byte(""), 0o600)
 	if err != nil {
 		rook.TerminateFatal(errors.Wrapf(err, "failed to write config file"))
 	}
@@ -294,7 +294,8 @@ func (m *MonStore) setAll(who string, settings map[string]string) ([]string, err
 	if err != nil {
 		logger.Errorf("failed to open assimilate input file %s. %c", assimilateConfPath.Name(), err)
 	}
-	logger.Infof("applying ceph settings:\n%s", string(fileContent))
+	logger.Infof("applying ceph settings for %q", who)
+	logger.Tracef("applying ceph settings:\n%s", string(fileContent))
 
 	args := []string{"config", "assimilate-conf", "-i", assimilateConfPath.Name(), "-o", outFilePath}
 	cephCmd := client.NewCephCommand(m.context, m.clusterInfo, args)
@@ -306,13 +307,13 @@ func (m *MonStore) setAll(who string, settings map[string]string) ([]string, err
 	}
 	if err != nil {
 		logger.Errorf("failed to run command ceph %s", args)
-		logger.Errorf("failed to apply ceph settings:\n%s", string(fileContent))
+		logger.Errorf("failed to apply ceph settings for %q", who)
 
 		return []string{}, errors.Wrapf(err, "failed to set ceph config in the centralized mon configuration database; "+
 			"output: %s", string(out))
 	}
 	if len(fileContent) > 0 {
-		logger.Infof("output: %s\n", string(fileContent))
+		logger.Tracef("output: %s\n", string(fileContent))
 		// read fileContent to ini format
 		iniContent, err := ini.Load(fileContent)
 		if err != nil {

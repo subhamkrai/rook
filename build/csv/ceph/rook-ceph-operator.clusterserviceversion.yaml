@@ -470,12 +470,14 @@ spec:
                 - watch
             - apiGroups:
                 - ""
+                - discovery.k8s.io
               resources:
                 - events
                 - persistentvolumes
                 - persistentvolumeclaims
                 - endpoints
                 - services
+                - endpointslices
               verbs:
                 - get
                 - list
@@ -1497,8 +1499,6 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
-                      - name: ROOK_OBC_WATCH_OPERATOR_NAMESPACE
-                        value: "true"
                     image: docker.io/rook/ceph:v1.15.0.369.g7822e6b19
                     name: rook-ceph-operator
                     resources: {}

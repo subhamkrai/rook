@@ -814,8 +814,23 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: ROOK_OBC_WATCH_OPERATOR_NAMESPACE
-              value: "true"
+
+          # Recommended resource requests and limits, if desired
+          #resources:
+          #  limits:
+          #    memory: 512Mi
+          #  requests:
+          #    cpu: 100m
+          #    memory: 128Mi
+
+          #  Uncomment it to run lib bucket provisioner in multithreaded mode
+          #- name: LIB_BUCKET_PROVISIONER_THREADS
+          #  value: "5"
+
+      # Uncomment these two settings to run the operator on the host network
+      # hostNetwork: true
+      # dnsPolicy: ClusterFirstWithHostNet
+
       volumes:
         - name: rook-config
           emptyDir: {}
