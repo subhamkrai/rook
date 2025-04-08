@@ -127,7 +127,7 @@ func CreateRBDMirrorBootstrapPeer(context *clusterd.Context, clusterInfo *Cluste
 func enablePoolMirroring(context *clusterd.Context, clusterInfo *ClusterInfo, pool cephv1.NamedPoolSpec) error {
 	logger.Infof("enabling mirroring type %q for pool %q", pool.Mirroring.Mode, pool.Name)
 
-	if pool.Mirroring.Mode == mirrorModeInitOnly && !clusterInfo.CephVersion.IsAtLeastTentacle() {
+	if pool.Mirroring.Mode == mirrorModeInitOnly && !clusterInfo.CephVersion.IsAtLeast(cephver.CephVersion{Major: 19, Minor: 2, Extra: 1}) {
 		return fmt.Errorf("ceph version %q does not support mirroring mode %s, minimum ceph version required is %q", clusterInfo.CephVersion.String(), pool.Mirroring.Mode, version.Tentacle.String())
 	}
 
