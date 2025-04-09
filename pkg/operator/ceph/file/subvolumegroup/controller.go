@@ -102,7 +102,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephFilesystemSubVolumeGroup CRD object
-	err = c.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephFilesystemSubVolumeGroup{TypeMeta: controllerTypeMeta}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&cephv1.CephFilesystemSubVolumeGroup{TypeMeta: controllerTypeMeta},
+			&handler.TypedEnqueueRequestForObject[*cephv1.CephFilesystemSubVolumeGroup]{},
+			opcontroller.WatchControllerPredicate[*cephv1.CephFilesystemSubVolumeGroup](mgr.GetScheme()),
+		),
+	)
 	if err != nil {
 		return err
 	}
@@ -230,7 +237,7 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) reconcile(request reconcile.Requ
 			return reconcile.Result{}, errors.Wrap(err, "failed to save cluster config")
 		}
 		r.updateStatus(observedGeneration, namespacedName, cephv1.ConditionReady)
-		if csi.EnableCSIOperator() {
+		if true {
 			err = csi.CreateUpdateClientProfileSubVolumeGroup(r.clusterInfo.Context, r.client, r.clusterInfo, cephFilesystemSubVolumeGroupName, buildClusterID(cephFilesystemSubVolumeGroup), cephCluster.Name)
 			if err != nil {
 				return reconcile.Result{}, errors.Wrap(err, "failed to create ceph csi-op config CR for subvolume")
@@ -345,7 +352,8 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) createOrUpdateSubVolumeGroup(cep
 
 // Delete the ceph filesystem subvolume group
 func (r *ReconcileCephFilesystemSubVolumeGroup) deleteSubVolumeGroup(cephFilesystemSubVolumeGroup *cephv1.CephFilesystemSubVolumeGroup,
-	cephCluster *cephv1.CephCluster) error {
+	cephCluster *cephv1.CephCluster,
+) error {
 	namespacedName := fmt.Sprintf("%s/%s", cephFilesystemSubVolumeGroup.Namespace, cephFilesystemSubVolumeGroup.Name)
 	logger.Infof("deleting ceph filesystem subvolume group object %q", namespacedName)
 	if err := cephclient.DeleteCephFSSubVolumeGroup(r.context, r.clusterInfo, cephFilesystemSubVolumeGroup.Spec.FilesystemName, getSubvolumeGroupName(cephFilesystemSubVolumeGroup)); err != nil {

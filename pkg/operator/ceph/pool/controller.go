@@ -114,23 +114,39 @@ func add(opManagerContext context.Context, mgr manager.Manager, r reconcile.Reco
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephBlockPool CRD object
-	err = c.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephBlockPool{TypeMeta: controllerTypeMeta}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&cephv1.CephBlockPool{TypeMeta: controllerTypeMeta},
+			&handler.TypedEnqueueRequestForObject[*cephv1.CephBlockPool]{},
+			opcontroller.WatchControllerPredicate[*cephv1.CephBlockPool](mgr.GetScheme()),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
 	// Build Handler function to return the list of ceph block pool
 	// This is used by the watchers below
-	handlerFunc, err := opcontroller.ObjectToCRMapper(opManagerContext, mgr.GetClient(), &cephv1.CephBlockPoolList{}, mgr.GetScheme())
+	handlerFunc, err := opcontroller.ObjectToCRMapper[*cephv1.CephBlockPoolList, *corev1.ConfigMap](
+		opManagerContext,
+		mgr.GetClient(),
+		&cephv1.CephBlockPoolList{},
+		mgr.GetScheme(),
+	)
 	if err != nil {
 		return err
 	}
 
 	// Watch for ConfigMap "rook-ceph-mon-endpoints" update and reconcile, which will reconcile update the bootstrap peer token
-	cmSource := source.Kind[client.Object](mgr.GetCache(), &corev1.ConfigMap{TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: corev1.SchemeGroupVersion.String()}},
-		handler.EnqueueRequestsFromMapFunc(handlerFunc), mon.PredicateMonEndpointChanges(),
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.ConfigMap{TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: corev1.SchemeGroupVersion.String()}},
+			handler.TypedEnqueueRequestsFromMapFunc(handlerFunc),
+			mon.PredicateMonEndpointChanges(),
+		),
 	)
-	err = c.Watch(cmSource)
 	if err != nil {
 		return err
 	}
@@ -350,9 +366,12 @@ func (r *ReconcileCephBlockPool) reconcile(request reconcile.Request) (reconcile
 			if r.blockPoolContexts[blockPoolChannelKey].started {
 				logger.Debug("pool monitoring go routine already running!")
 			} else {
-				r.blockPoolContexts[blockPoolChannelKey].started = true
-				// Run the goroutine to update the mirroring status
-				go checker.CheckMirroring(r.blockPoolContexts[blockPoolChannelKey].internalCtx)
+				if cephBlockPool.Spec.Mirroring.Mode != "init-only" {
+					r.blockPoolContexts[blockPoolChannelKey].started = true
+					// Run the goroutine to update the mirroring status and skip when blockpool mirroing mode in init-only as radosnamespace mirroring is the right place to check
+					// mirroring status when blockpool mirroring mode is init-only.
+					go checker.CheckMirroring(r.blockPoolContexts[blockPoolChannelKey].internalCtx)
+				}
 			}
 		}
 

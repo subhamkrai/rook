@@ -27,6 +27,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	rgw "github.com/rook/rook/pkg/operator/ceph/object"
@@ -34,12 +41,7 @@ import (
 	"github.com/rook/rook/tests/framework/installer"
 	"github.com/rook/rook/tests/framework/utils"
 	"github.com/rook/rook/tests/integration/object/bucketowner"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/rook/rook/tests/integration/object/user/userkeys"
 )
 
 const (
@@ -47,9 +49,7 @@ const (
 	objectStoreTLSName           = "tls-test-store"
 )
 
-var (
-	objectStoreServicePrefix = "rook-ceph-rgw-"
-)
+var objectStoreServicePrefix = "rook-ceph-rgw-"
 
 func TestCephObjectSuite(t *testing.T) {
 	s := new(ObjectSuite)
@@ -107,6 +107,7 @@ func (s *ObjectSuite) TestWithTLS() {
 	runObjectE2ETest(s.helper, s.k8sh, s.installer, &s.Suite, s.settings.Namespace, tls, swiftAndKeystone)
 	cleanUpTLS(s)
 }
+
 func cleanUpTLS(s *ObjectSuite) {
 	err := s.k8sh.Clientset.CoreV1().Secrets(s.settings.Namespace).Delete(context.TODO(), objectTLSSecretName, metav1.DeleteOptions{})
 	if err != nil {
@@ -154,6 +155,7 @@ func runObjectE2ETest(helper *clients.TestClient, k8sh *utils.K8sHelper, install
 	testObjectStoreOperations(s, helper, k8sh, namespace, storeName, swiftAndKeystone)
 
 	bucketowner.TestObjectBucketClaimBucketOwner(s.T(), k8sh, installer, logger, tlsEnable)
+	userkeys.TestObjectStoreUserKeys(s.T(), k8sh, installer, logger, tlsEnable)
 
 	bucketNotificationTestStoreName := "bucket-notification-" + storeName
 	createCephObjectStore(s.T(), helper, k8sh, installer, namespace, bucketNotificationTestStoreName, 1, tlsEnable, swiftAndKeystone)

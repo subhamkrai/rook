@@ -82,6 +82,10 @@ spec:
                         enabled:
                           type: boolean
                         mode:
+                          enum:
+                          - pool
+                          - image
+                          - init-only
                           type: string
                         peers:
                           nullable: true
@@ -216,6 +220,10 @@ spec:
                       enabled:
                         type: boolean
                       mode:
+                        enum:
+                        - pool
+                        - image
+                        - init-only
                         type: string
                       peers:
                         nullable: true

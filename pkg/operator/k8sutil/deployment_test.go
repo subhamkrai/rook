@@ -100,7 +100,8 @@ func TestUpdateMultipleDeploymentsAndWait(t *testing.T) {
 	}
 	addProgressDeadlineExceeded := func(d *appsv1.Deployment) {
 		d.Status.Conditions = append(d.Status.Conditions, appsv1.DeploymentCondition{
-			Type: appsv1.DeploymentProgressing, Reason: "ProgressDeadlineExceeded"})
+			Type: appsv1.DeploymentProgressing, Reason: "ProgressDeadlineExceeded",
+		})
 	}
 
 	clientset = fake.NewSimpleClientset()
@@ -265,8 +266,8 @@ func TestWaitForDeploymentsToUpdate(t *testing.T) {
 		waitForDeploymentPeriod = oldPeriod
 		waitForDeploymentTimeout = oldTimeout
 	}()
-	waitForDeploymentPeriod = 1 * time.Millisecond
-	waitForDeploymentTimeout = 3 * time.Millisecond
+	waitForDeploymentPeriod = 3 * time.Millisecond
+	waitForDeploymentTimeout = 9 * time.Millisecond
 
 	timesCalled := 0
 	// generate a status that is not ready when first called but becomes ready later
@@ -296,7 +297,8 @@ func TestWaitForDeploymentsToUpdate(t *testing.T) {
 	}
 	addProgressDeadlineExceeded := func(d *appsv1.Deployment) {
 		d.Status.Conditions = append(d.Status.Conditions, appsv1.DeploymentCondition{
-			Type: appsv1.DeploymentProgressing, Reason: "ProgressDeadlineExceeded"})
+			Type: appsv1.DeploymentProgressing, Reason: "ProgressDeadlineExceeded",
+		})
 	}
 
 	// inputs

@@ -73,7 +73,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	logger.Info("successfully started")
 
 	// Watch for changes on the CephBucketTopic CRD object
-	err = c.Watch(source.Kind[client.Object](mgr.GetCache(), &cephv1.CephBucketTopic{}, &handler.EnqueueRequestForObject{}, opcontroller.WatchControllerPredicate()))
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&cephv1.CephBucketTopic{},
+			&handler.TypedEnqueueRequestForObject[*cephv1.CephBucketTopic]{},
+			opcontroller.WatchControllerPredicate[*cephv1.CephBucketTopic](mgr.GetScheme()),
+		),
+	)
 	if err != nil {
 		return err
 	}
@@ -89,6 +96,7 @@ func (r *ReconcileBucketTopic) Reconcile(context context.Context, request reconc
 	// workaround because the rook logging mechanism is not compatible with the controller-runtime logging interface
 	reconcileResponse, err := r.reconcile(request)
 	if err != nil {
+		r.updateStatus(k8sutil.ObservedGenerationNotAvailable, request.NamespacedName, k8sutil.ReconcileFailedStatus, nil)
 		logger.Errorf("failed to reconcile %v", err)
 	}
 
@@ -172,7 +180,6 @@ func (r *ReconcileBucketTopic) reconcile(request reconcile.Request) (reconcile.R
 	// validate the topic settings
 	err = cephBucketTopic.ValidateTopicSpec()
 	if err != nil {
-		r.updateStatus(k8sutil.ObservedGenerationNotAvailable, request.NamespacedName, k8sutil.ReconcileFailedStatus, nil)
 		return reconcile.Result{}, errors.Wrapf(err, "invalid CephBucketTopic %q", request.NamespacedName)
 	}
 
@@ -182,7 +189,7 @@ func (r *ReconcileBucketTopic) reconcile(request reconcile.Request) (reconcile.R
 	// create topic
 	topicARN, err := r.createCephBucketTopic(cephBucketTopic)
 	if err != nil {
-		return r.setFailedStatus(k8sutil.ObservedGenerationNotAvailable, request.NamespacedName, "failed to create topic for bucket notifications", err)
+		return reconcile.Result{}, errors.Wrapf(err, "topic creation failed for CephBucketTopic %q", request.NamespacedName)
 	}
 
 	// update ObservedGeneration in status a the end of reconcile
@@ -218,11 +225,6 @@ func (r *ReconcileBucketTopic) deleteCephBucketTopic(topic *cephv1.CephBucketTop
 		},
 		topic,
 	)
-}
-
-func (r *ReconcileBucketTopic) setFailedStatus(observedGeneration int64, name types.NamespacedName, errMessage string, err error) (reconcile.Result, error) {
-	r.updateStatus(observedGeneration, name, k8sutil.ReconcileFailedStatus, nil)
-	return reconcile.Result{}, errors.Wrapf(err, "%s", errMessage)
 }
 
 // updateStatus updates the topic with a given status

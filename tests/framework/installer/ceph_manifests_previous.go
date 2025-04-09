@@ -24,7 +24,7 @@ import (
 
 const (
 	// The version from which the upgrade test will start
-	Version1_15 = "v1.15.6"
+	Version1_16 = "v1.16.6"
 )
 
 // CephManifestsPreviousVersion wraps rook yaml definitions
@@ -43,6 +43,10 @@ func (m *CephManifestsPreviousVersion) GetCRDs(k8shelper *utils.K8sHelper) strin
 
 func (m *CephManifestsPreviousVersion) GetCSINFSRBAC() string {
 	return m.settings.readManifestFromGitHub("/csi/nfs/rbac.yaml")
+}
+
+func (m *CephManifestsPreviousVersion) GetCSIOperator() string {
+	return "not-supported"
 }
 
 // GetRookOperator returns rook Operator manifest

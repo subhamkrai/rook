@@ -146,6 +146,11 @@ func (h *CephInstaller) CreateCephOperator() (err error) {
 	}
 
 	logger.Infof("Rook operator started")
+
+	if err := h.InstallCSIOperator(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -209,7 +214,6 @@ func (h *CephInstaller) Execute(command string, parameters []string, namespace s
 
 // CreateCephCluster creates rook cluster via kubectl
 func (h *CephInstaller) CreateCephCluster() error {
-
 	ctx := context.TODO()
 	var err error
 	h.settings.DataDirHostPath, err = h.initTestDir(h.settings.Namespace)
@@ -267,10 +271,6 @@ func (h *CephInstaller) CreateCephCluster() error {
 
 func (h *CephInstaller) waitForCluster() error {
 	monWaitLabel := "app=rook-ceph-mon,mon_daemon=true"
-	if h.Manifests.Settings().RookVersion == Version1_15 {
-		// TODO: Remove this when upgrade test is from v1.15.7 since prior releases do not have the mon_daemon label
-		monWaitLabel = "app=rook-ceph-mon"
-	}
 	if err := h.k8shelper.WaitForPodCount(monWaitLabel, h.settings.Namespace, h.settings.Mons); err != nil {
 		return err
 	}
@@ -436,7 +436,7 @@ func (h *CephInstaller) initTestDir(namespace string) (string, error) {
 	// skip the test dir creation if we are not running under "/data"
 	if val != "/data" {
 		// Create the test dir on the local host
-		if err := os.MkdirAll(testDir, 0777); err != nil {
+		if err := os.MkdirAll(testDir, 0o777); err != nil {
 			return "", err
 		}
 
@@ -465,6 +465,45 @@ func (h *CephInstaller) GetNodeHostnames() ([]string, error) {
 	}
 
 	return names, nil
+}
+
+func (h *CephInstaller) InstallCSIOperator() error {
+	if h.settings.RookVersion == Version1_16 {
+		logger.Infof("Skipping the CSI operator installation for previous version of Rook")
+		return nil
+	}
+
+	logger.Infof("Starting the CSI operator")
+	_, err := h.k8shelper.KubectlWithStdin(h.Manifests.GetCSIOperator(), createFromStdinArgs...)
+	if err != nil {
+		return errors.Wrap(err, "failed to create csi-operator")
+	}
+	if !h.k8shelper.IsPodInExpectedStateWithLabel("control-plane=ceph-csi-op-controller-manager", h.settings.OperatorNamespace, "Running") {
+		logger.Error("csi-operator is not running")
+		h.k8shelper.GetLogsFromNamespace(h.settings.OperatorNamespace, "test-setup", utils.TestEnvName())
+		logger.Error("csi-operator is not Running, abort!")
+		return err
+	}
+	logger.Infof("CSI operator started")
+	return nil
+}
+
+func (h *CephInstaller) SetOperatorSetting(key, value string) error {
+	configmap := "rook-ceph-operator-config"
+	logger.Infof("applying configmap %q setting: %q -> %q", configmap, key, value)
+
+	ctx := context.TODO()
+	cm, err := h.k8shelper.Clientset.CoreV1().ConfigMaps(h.settings.OperatorNamespace).Get(ctx, configmap, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "error reading configmap %q", configmap)
+	}
+
+	cm.Data[key] = value
+	_, err = h.k8shelper.Clientset.CoreV1().ConfigMaps(h.settings.OperatorNamespace).Update(ctx, cm, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to update configmap %q", configmap)
+	}
+	return nil
 }
 
 func (h *CephInstaller) installRookOperator() (bool, error) {
@@ -752,6 +791,14 @@ func (h *CephInstaller) UninstallRookFromMultipleNS(manifests ...CephManifests) 
 		} else {
 			logger.Infof("done deleting all the resources in the operator manifest")
 		}
+
+		logger.Info("Removing the CSI operator")
+		_, err = h.k8shelper.KubectlWithStdin(h.Manifests.GetCSIOperator(), deleteFromStdinArgs...)
+		if err != nil {
+			logger.Errorf("failed to remove CSI operator. %v", err)
+		} else {
+			logger.Infof("done deleting the CSI operator")
+		}
 	}
 
 	logger.Info("removing the CRDs")
@@ -867,7 +914,7 @@ func (h *CephInstaller) checkCephHealthStatus() {
 
 	// The health status is not stable enough for the integration tests to rely on.
 	// We should enable this check if we can get the ceph status to be stable despite all the changing configurations performed by rook.
-	//assert.Equal(h.T(), "HEALTH_OK", clusterResource.Status.CephStatus.Health)
+	// assert.Equal(h.T(), "HEALTH_OK", clusterResource.Status.CephStatus.Health)
 	assert.NotEqual(h.T(), "", clusterResource.Status.CephStatus.LastChecked)
 
 	// Print the details if the health is not ok
@@ -907,7 +954,6 @@ func (h *CephInstaller) GatherAllRookLogs(testName string, namespaces ...string)
 
 // NewCephInstaller creates new instance of CephInstaller
 func NewCephInstaller(t func() *testing.T, clientset *kubernetes.Clientset, settings *TestCephSettings) *CephInstaller {
-
 	// By default set a cluster name that is different from the namespace so we don't rely on the namespace
 	// in expected places
 	if settings.ClusterName == "" {

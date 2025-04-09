@@ -2086,6 +2086,21 @@ ObjectUserQuotaSpec
 </tr>
 <tr>
 <td>
+<code>keys</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ObjectUserKey">
+[]ObjectUserKey
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Allows specifying credentials for the user. If not provided, the operator
+will generate them.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>clusterNamespace</code><br/>
 <em>
 string
@@ -5766,10 +5781,7 @@ time.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>PGHealthCheckTimeout is the time (in minutes) that the operator will wait for the placement groups to become
-healthy (active+clean) after a drain was completed and OSDs came back up. Rook will continue with the next drain
-if the timeout exceeds. It only works if managePodBudgets is true.
-No values or 0 means that the operator will wait until the placement groups are healthy before unblocking the next drain.</p>
+<p>DEPRECATED: PGHealthCheckTimeout is no longer implemented</p>
 </td>
 </tr>
 <tr>
@@ -7233,6 +7245,21 @@ This feature is intended for advanced users. It allows breaking configurations t
 applied. Use with caution.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>readAffinity</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.RgwReadAffinity">
+RgwReadAffinity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReadAffinity defines the RGW read affinity policy to optimize the read requests for the RGW clients
+Note: Only supported from Ceph Tentacle (v20)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ceph.rook.io/v1.HTTPEndpointSpec">HTTPEndpointSpec
@@ -7492,6 +7519,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>The ack level required for this topic (none/broker)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>mechanism</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The authentication mechanism for this topic (PLAIN/SCRAM-SHA-512/SCRAM-SHA-256/GSSAPI/OAUTHBEARER)</p>
 </td>
 </tr>
 </tbody>
@@ -8414,7 +8453,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Mode is the mirroring mode: either pool or image</p>
+<p>Mode is the mirroring mode: pool, image or init-only.</p>
 </td>
 </tr>
 <tr>
@@ -10386,6 +10425,21 @@ ObjectUserQuotaSpec
 </tr>
 <tr>
 <td>
+<code>keys</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.ObjectUserKey">
+[]ObjectUserKey
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Allows specifying credentials for the user. If not provided, the operator
+will generate them.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>clusterNamespace</code><br/>
 <em>
 string
@@ -10446,6 +10500,19 @@ int64
 <td>
 <em>(Optional)</em>
 <p>ObservedGeneration is the latest generation observed by the controller.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keys</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.SecretReference">
+[]SecretReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -10656,6 +10723,51 @@ string
 <td>
 <em>(Optional)</em>
 <p>Add capabilities for user to set rate limiter for user and bucket. Documented in <a href="https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities">https://docs.ceph.com/en/latest/radosgw/admin/?#add-remove-admin-capabilities</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ceph.rook.io/v1.ObjectUserKey">ObjectUserKey
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreUserSpec">ObjectStoreUserSpec</a>)
+</p>
+<div>
+<p>ObjectUserKey defines a set of rgw user access credentials to be retrieved
+from secret resources.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>accessKeyRef</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<p>Secret key selector for the access_key (commonly referred to as AWS_ACCESS_KEY_ID).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretKeyRef</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<p>Secret key selector for the secret_key (commonly referred to as AWS_SECRET_ACCESS_KEY).</p>
 </td>
 </tr>
 </tbody>
@@ -11848,7 +11960,7 @@ RadosNamespaceMirroringMode
 </em>
 </td>
 <td>
-<p>Mode is the mirroring mode; either pool or image</p>
+<p>Mode is the mirroring mode; either pool or image.</p>
 </td>
 </tr>
 <tr>
@@ -12033,6 +12145,37 @@ HybridStorageSpec
 <div>
 <p>ResourceSpec is a collection of ResourceRequirements that describes the compute resource requirements</p>
 </div>
+<h3 id="ceph.rook.io/v1.RgwReadAffinity">RgwReadAffinity
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.GatewaySpec">GatewaySpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type defines the RGW ReadAffinity type
+localize: read from the nearest OSD based on crush location of the RGW client
+balance: picks a random OSD from the PG&rsquo;s active set
+default: read from the primary OSD</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="ceph.rook.io/v1.S3Spec">S3Spec
 </h3>
 <p>
@@ -12340,6 +12483,55 @@ int32
 <td><p>SanitizeMethodQuick will sanitize metadata only on the disk</p>
 </td>
 </tr></tbody>
+</table>
+<h3 id="ceph.rook.io/v1.SecretReference">SecretReference
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreUserStatus">ObjectStoreUserStatus</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>,secretReference</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceVersion</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
 </table>
 <h3 id="ceph.rook.io/v1.SecuritySpec">SecuritySpec
 </h3>
@@ -13704,7 +13896,7 @@ string
 </em>
 </td>
 <td>
-<p>RGW Zone the Object Store is in</p>
+<p>CephObjectStoreZone name this CephObjectStore is part of</p>
 </td>
 </tr>
 </tbody>

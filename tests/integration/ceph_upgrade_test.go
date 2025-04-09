@@ -105,7 +105,7 @@ func (s *UpgradeSuite) TestUpgradeHelm() {
 }
 
 func (s *UpgradeSuite) testUpgrade(useHelm bool, initialCephVersion v1.CephVersionSpec) {
-	baseRookImage := installer.Version1_15
+	baseRookImage := installer.Version1_16
 	s.baseSetup(useHelm, baseRookImage, initialCephVersion)
 
 	objectUserID := "upgraded-user"
@@ -451,6 +451,9 @@ func (s *UpgradeSuite) upgradeToMaster() {
 		require.NoError(s.T(), err, "failed to upgrade the cluster chart")
 		return
 	}
+
+	require.NoError(s.T(), s.installer.InstallCSIOperator())
+	require.NoError(s.T(), s.installer.SetOperatorSetting("ROOK_USE_CSI_OPERATOR", "false"))
 
 	require.NoError(s.T(), s.k8sh.ResourceOperation("apply", s.installer.Manifests.GetCRDs(s.k8sh)))
 

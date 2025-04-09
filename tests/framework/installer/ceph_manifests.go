@@ -30,6 +30,7 @@ type CephManifests interface {
 	Settings() *TestCephSettings
 	GetCRDs(k8shelper *utils.K8sHelper) string
 	GetCSINFSRBAC() string
+	GetCSIOperator() string
 	GetOperator() string
 	GetCommon() string
 	GetCommonExternal() string
@@ -71,7 +72,7 @@ func NewCephManifests(settings *TestCephSettings) CephManifests {
 	switch settings.RookVersion {
 	case LocalBuildTag:
 		return &CephManifestsMaster{settings}
-	case Version1_15:
+	case Version1_16:
 		return &CephManifestsPreviousVersion{settings, &CephManifestsMaster{settings}}
 	}
 	panic(fmt.Errorf("unrecognized ceph manifest version: %s", settings.RookVersion))
@@ -97,6 +98,11 @@ func (m *CephManifestsMaster) GetOperator() string {
 		manifest = m.settings.readManifest("operator.yaml")
 	}
 	return m.settings.replaceOperatorSettings(manifest)
+}
+
+func (m *CephManifestsMaster) GetCSIOperator() string {
+	manifest := m.settings.readManifest("csi-operator.yaml")
+	return m.settings.replaceCSIOperatorSettings(m.settings.OperatorNamespace, manifest)
 }
 
 func (m *CephManifestsMaster) GetCommonExternal() string {
@@ -183,7 +189,6 @@ spec:
   disruptionManagement:
     managePodBudgets: true
     osdMaintenanceTimeout: 30
-    pgHealthCheckTimeout: 0
   healthCheck:
     daemonHealth:
       mon:
