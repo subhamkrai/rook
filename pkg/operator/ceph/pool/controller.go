@@ -397,19 +397,6 @@ func (r *ReconcileCephBlockPool) handleDeletionBlocked(cephBlockPool *cephv1.Cep
 	poolSpec := cephBlockPool.ToNamedPoolSpec()
 	deletionBlocked := false
 
-	isEmpty, err := cephclient.IsPoolEmpty(r.context, r.clusterInfo, poolSpec.Name)
-	if err != nil {
-		return err
-	}
-	var emptyCondition cephv1.Condition
-	if isEmpty {
-		emptyCondition = dependents.DeletionBlockedDueToNonEmptyPoolCondition(false, fmt.Sprintf("pool %q is empty and can be deleted", poolSpec.Name))
-	} else {
-		deletionBlocked = true
-		emptyCondition = dependents.DeletionBlockedDueToNonEmptyPoolCondition(true, fmt.Sprintf("pool %q contains images or snapshots and cannot be deleted", poolSpec.Name))
-	}
-	logger.Info(emptyCondition.Message)
-
 	deps, err := cephBlockPoolDependents(r.context, r.clusterInfo, cephBlockPool)
 	if err != nil {
 		return err
@@ -422,6 +409,20 @@ func (r *ReconcileCephBlockPool) handleDeletionBlocked(cephBlockPool *cephv1.Cep
 		_, _, depCondition = reporting.GenerateConditionBlockedDueToDependents(cephBlockPool, deps)
 	}
 	logger.Info(depCondition.Message)
+
+	radosNamespaces := deps.OfKind(radosNamespacesKeyName)
+	isEmpty, emptyMessage, err := cephclient.IsPoolEmpty(r.context, r.clusterInfo, poolSpec.Name, radosNamespaces)
+	if err != nil {
+		return err
+	}
+	var emptyCondition cephv1.Condition
+	if isEmpty {
+		emptyCondition = dependents.DeletionBlockedDueToNonEmptyPoolCondition(false, emptyMessage)
+	} else {
+		deletionBlocked = true
+		emptyCondition = dependents.DeletionBlockedDueToNonEmptyPoolCondition(true, emptyMessage)
+	}
+	logger.Info(emptyCondition.Message)
 
 	nsName := types.NamespacedName{Namespace: cephBlockPool.Namespace, Name: cephBlockPool.Name}
 	err = reporting.UpdateStatusConditionsWithRetry(
