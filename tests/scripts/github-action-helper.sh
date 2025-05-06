@@ -181,7 +181,7 @@ function build_rook() {
   fi
   GOPATH=$(go env GOPATH) make clean
   for _ in $(seq 1 3); do
-    if ! o=$(make -j"$(nproc)" IMAGES='ceph' "$build_type"); then
+    if ! o=$(make -j"$(nproc)" "$build_type"); then
       case "$o" in
       *"$NETWORK_ERROR"*)
         echo "network failure occurred, retrying..."
@@ -317,7 +317,7 @@ function deploy_cluster() {
 
   # enable monitoring
   yq w -i -d0 cluster-test.yaml spec.monitoring.enabled true
-  kubectl create -f https://raw.githubusercontent.com/coreos/prometheus-operator/v0.71.1/bundle.yaml
+  kubectl create -f https://raw.githubusercontent.com/coreos/prometheus-operator/v0.82.0/bundle.yaml
   kubectl create -f monitoring/rbac.yaml
 
   kubectl create -f cluster-test.yaml
@@ -708,8 +708,8 @@ function test_csi_nfs_workload {
 }
 
 function install_minikube_with_none_driver() {
-  CRICTL_VERSION="v1.32.0"
-  MINIKUBE_VERSION="v1.34.0"
+  CRICTL_VERSION="v1.33.0"
+  MINIKUBE_VERSION="v1.35.0"
 
   sudo apt update
   sudo apt install -y conntrack socat
@@ -717,16 +717,16 @@ function install_minikube_with_none_driver() {
   sudo dpkg -i minikube_latest_amd64.deb
   rm -f minikube_latest_amd64.deb
 
-  curl -LO https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.15/cri-dockerd_0.3.15.3-0.ubuntu-focal_amd64.deb
-  sudo dpkg -i cri-dockerd_0.3.15.3-0.ubuntu-focal_amd64.deb
-  rm -f cri-dockerd_0.3.15.3-0.ubuntu-focal_amd64.deb
+  curl -LO https://github.com/Mirantis/cri-dockerd/releases/download/v0.4.0/cri-dockerd_0.4.0.3-0.ubuntu-focal_amd64.deb
+  sudo dpkg -i cri-dockerd_0.4.0.3-0.ubuntu-focal_amd64.deb
+  rm -f cri-dockerd_0.4.0.3-0.ubuntu-focal_amd64.deb
 
   wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
   sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/local/bin
   rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
   sudo sysctl fs.protected_regular=0
 
-  CNI_PLUGIN_VERSION="v1.5.1"
+  CNI_PLUGIN_VERSION="v1.7.1"
   CNI_PLUGIN_TAR="cni-plugins-linux-amd64-$CNI_PLUGIN_VERSION.tgz" # change arch if not on amd64
   CNI_PLUGIN_INSTALL_DIR="/opt/cni/bin"
 
