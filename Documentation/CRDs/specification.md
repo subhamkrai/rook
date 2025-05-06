@@ -1048,6 +1048,18 @@ map[string]map[string]string
 <p>Ceph Config options</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>cephConfigFromSecret</code><br/>
+<em>
+map[string]map[string]k8s.io/api/core/v1.SecretKeySelector
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CephConfigFromSecret works exactly like CephConfig but takes config value from Secret Key reference.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2946,6 +2958,19 @@ int64
 <td>
 <em>(Optional)</em>
 <p>ObservedGeneration is the latest generation observed by the controller.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secrets</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.SecretReference">
+[]SecretReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -4890,6 +4915,18 @@ map[string]map[string]string
 <td>
 <em>(Optional)</em>
 <p>Ceph Config options</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cephConfigFromSecret</code><br/>
+<em>
+map[string]map[string]k8s.io/api/core/v1.SecretKeySelector
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CephConfigFromSecret works exactly like CephConfig but takes config value from Secret Key reference.</p>
 </td>
 </tr>
 </tbody>
@@ -7531,6 +7568,34 @@ string
 <td>
 <em>(Optional)</em>
 <p>The authentication mechanism for this topic (PLAIN/SCRAM-SHA-512/SCRAM-SHA-256/GSSAPI/OAUTHBEARER)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>userSecretRef</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The kafka user name to use for authentication</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>passwordSecretRef</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The kafka password to use for authentication</p>
 </td>
 </tr>
 </tbody>
@@ -12487,7 +12552,7 @@ int32
 <h3 id="ceph.rook.io/v1.SecretReference">SecretReference
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.ObjectStoreUserStatus">ObjectStoreUserStatus</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.BucketTopicStatus">BucketTopicStatus</a>, <a href="#ceph.rook.io/v1.ObjectStoreUserStatus">ObjectStoreUserStatus</a>)
 </p>
 <div>
 </div>

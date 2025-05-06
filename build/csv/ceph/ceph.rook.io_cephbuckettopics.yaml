@@ -87,11 +87,37 @@ spec:
                         - GSSAPI
                         - OAUTHBEARER
                         type: string
+                      passwordSecretRef:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            default: ""
+                            type: string
+                          optional:
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
                       uri:
                         minLength: 1
                         type: string
                       useSSL:
                         type: boolean
+                      userSecretRef:
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            default: ""
+                            type: string
+                          optional:
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
                     required:
                     - uri
                     type: object
@@ -121,6 +147,20 @@ spec:
                 type: integer
               phase:
                 type: string
+              secrets:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    resourceVersion:
+                      type: string
+                    uid:
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         required:
