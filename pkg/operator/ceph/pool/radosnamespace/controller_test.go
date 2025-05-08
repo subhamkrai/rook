@@ -27,7 +27,6 @@ import (
 	rookclient "github.com/rook/rook/pkg/client/clientset/versioned/fake"
 	"github.com/rook/rook/pkg/client/clientset/versioned/scheme"
 	"github.com/rook/rook/pkg/clusterd"
-	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
 	"github.com/rook/rook/pkg/operator/ceph/csi"
 	"github.com/rook/rook/pkg/operator/k8sutil"
@@ -38,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -102,6 +102,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 		context:          c,
 		opManagerContext: ctx,
 		opConfig:         opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
+		recorder:         record.NewFakeRecorder(5),
 	}
 
 	// Mock request to simulate Reconcile() being called on an event for a
@@ -138,6 +139,9 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 	s.AddKnownTypes(cephv1.SchemeGroupVersion, &cephv1.CephCluster{}, &cephv1.CephClusterList{})
 
 	t.Run("error - no ceph cluster", func(t *testing.T) {
+		// Create pool for updating status
+		_, err := c.RookClientset.CephV1().CephBlockPoolRadosNamespaces(namespace).Create(ctx, cephBlockPoolRadosNamespace, metav1.CreateOptions{})
+		assert.NoError(t, err)
 		res, err := r.Reconcile(ctx, req)
 		assert.NoError(t, err)
 		assert.True(t, res.Requeue)
@@ -148,7 +152,11 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 		// Create a fake client to mock API calls.
 		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(object...).Build()
 		// Create a ReconcileCephBlockPoolRadosNamespace object with the scheme and fake client.
-		r = &ReconcileCephBlockPoolRadosNamespace{client: cl, scheme: s, context: c, opManagerContext: context.TODO(), opConfig: opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"}}
+		r = &ReconcileCephBlockPoolRadosNamespace{
+			client: cl, scheme: s, context: c, opManagerContext: context.TODO(),
+			recorder: record.NewFakeRecorder(5),
+			opConfig: opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
+		}
 		res, err := r.Reconcile(ctx, req)
 		assert.NoError(t, err)
 		assert.True(t, res.Requeue)
@@ -223,6 +231,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		// Enable CSI
@@ -275,6 +284,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			context:          c,
 			opManagerContext: ctx,
 			opConfig:         opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
+			recorder:         record.NewFakeRecorder(5),
 		}
 
 		// Enable CSI
@@ -342,6 +352,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -388,6 +399,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -438,6 +450,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -488,6 +501,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -540,6 +554,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -596,6 +611,7 @@ func TestCephBlockPoolRadosNamespaceController(t *testing.T) {
 			opManagerContext:       context.TODO(),
 			opConfig:               opcontroller.OperatorConfig{Image: "ceph/ceph:v14.2.9"},
 			radosNamespaceContexts: make(map[string]*mirrorHealth),
+			recorder:               record.NewFakeRecorder(5),
 		}
 
 		res, err := r.Reconcile(ctx, req)
@@ -625,9 +641,9 @@ func TestGetRadosNamespaceName(t *testing.T) {
 			"implicit-namespace",
 			cephv1.CephBlockPoolRadosNamespace{
 				ObjectMeta: metav1.ObjectMeta{Name: "cr-name1"},
-				Spec:       cephv1.CephBlockPoolRadosNamespaceSpec{Name: cephclient.ImplicitNamespaceKey},
+				Spec:       cephv1.CephBlockPoolRadosNamespaceSpec{Name: cephv1.ImplicitNamespaceKey},
 			},
-			cephclient.ImplicitNamespaceVal,
+			cephv1.ImplicitNamespaceVal,
 		},
 		{
 			"valid-namespace",
@@ -649,8 +665,8 @@ func TestGetRadosNamespaceName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getRadosNamespaceName(&tt.args); got != tt.want {
-				t.Errorf("getRadosNamespaceName() = %v, want %v", got, tt.want)
+			if got := cephv1.GetRadosNamespaceName(&tt.args); got != tt.want {
+				t.Errorf("GetRadosNamespaceName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
