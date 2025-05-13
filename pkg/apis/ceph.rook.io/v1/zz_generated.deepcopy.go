@@ -3193,7 +3193,7 @@ func (in *MirroringStatus) DeepCopyInto(out *MirroringStatus) {
 	if in.Summary != nil {
 		in, out := &in.Summary, &out.Summary
 		*out = new(MirroringStatusSummarySpec)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -3229,6 +3229,12 @@ func (in *MirroringStatusSpec) DeepCopy() *MirroringStatusSpec {
 func (in *MirroringStatusSummarySpec) DeepCopyInto(out *MirroringStatusSummarySpec) {
 	*out = *in
 	out.States = in.States
+	if in.ImageStates != nil {
+		in, out := &in.ImageStates, &out.ImageStates
+		*out = new(StatesSpec)
+		**out = **in
+	}
+	out.GroupStates = in.GroupStates
 	return
 }
 
