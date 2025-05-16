@@ -140,10 +140,49 @@ spec:
                     properties:
                       daemon_health:
                         type: string
+                      group_health:
+                        nullable: true
+                        type: string
+                      group_states:
+                        nullable: true
+                        properties:
+                          error:
+                            type: integer
+                          replaying:
+                            type: integer
+                          starting_replay:
+                            type: integer
+                          stopped:
+                            type: integer
+                          stopping_replay:
+                            type: integer
+                          syncing:
+                            type: integer
+                          unknown:
+                            type: integer
+                        type: object
                       health:
                         type: string
                       image_health:
                         type: string
+                      image_states:
+                        nullable: true
+                        properties:
+                          error:
+                            type: integer
+                          replaying:
+                            type: integer
+                          starting_replay:
+                            type: integer
+                          stopped:
+                            type: integer
+                          stopping_replay:
+                            type: integer
+                          syncing:
+                            type: integer
+                          unknown:
+                            type: integer
+                        type: object
                       states:
                         nullable: true
                         properties:
