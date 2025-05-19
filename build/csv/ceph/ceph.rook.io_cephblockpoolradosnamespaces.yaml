@@ -76,6 +76,25 @@ spec:
             type: object
           status:
             properties:
+              conditions:
+                items:
+                  properties:
+                    lastHeartbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
               info:
                 additionalProperties:
                   type: string
@@ -121,10 +140,49 @@ spec:
                     properties:
                       daemon_health:
                         type: string
+                      group_health:
+                        nullable: true
+                        type: string
+                      group_states:
+                        nullable: true
+                        properties:
+                          error:
+                            type: integer
+                          replaying:
+                            type: integer
+                          starting_replay:
+                            type: integer
+                          stopped:
+                            type: integer
+                          stopping_replay:
+                            type: integer
+                          syncing:
+                            type: integer
+                          unknown:
+                            type: integer
+                        type: object
                       health:
                         type: string
                       image_health:
                         type: string
+                      image_states:
+                        nullable: true
+                        properties:
+                          error:
+                            type: integer
+                          replaying:
+                            type: integer
+                          starting_replay:
+                            type: integer
+                          stopped:
+                            type: integer
+                          stopping_replay:
+                            type: integer
+                          syncing:
+                            type: integer
+                          unknown:
+                            type: integer
+                        type: object
                       states:
                         nullable: true
                         properties:
