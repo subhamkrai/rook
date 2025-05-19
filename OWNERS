@@ -1,0 +1,17 @@
+# approval == this is a good idea /approve
+approvers:
+    - travisn
+    - agarwal-mudit
+    - BlaineEXE
+    - sp98
+    - subhamkrai
+
+# review == this code is good /lgtm
+reviewers:
+    - travisn
+    - agarwal-mudit
+    - BlaineEXE
+    - sp98
+    - subhamkrai
+    - parth-gr
+    - Madhu-1
