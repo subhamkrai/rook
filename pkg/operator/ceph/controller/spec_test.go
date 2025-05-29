@@ -566,7 +566,7 @@ func TestGetDaemonsToSkipReconcile(t *testing.T) {
 			labels: map[string]string{
 				k8sutil.AppAttr:              "rook-ceph-nfs",
 				cephv1.SkipReconcileLabelKey: "true",
-				config.NfsType:               "a",
+				"instance":                   "a",
 			},
 			expectedSkip:     true,
 			expectedDaemonID: "a",
@@ -575,7 +575,7 @@ func TestGetDaemonsToSkipReconcile(t *testing.T) {
 			name: "no skip-reconcile label",
 			labels: map[string]string{
 				k8sutil.AppAttr: "rook-ceph-nfs",
-				config.NfsType:  "b",
+				"instance":      "b",
 			},
 			expectedSkip:     false,
 			expectedDaemonID: "b",
@@ -585,7 +585,7 @@ func TestGetDaemonsToSkipReconcile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			namespace := "rook-ceph"
-			daemonName := "nfs"
+			daemonName := "instance"
 			appLabel := "rook-ceph-nfs"
 
 			clientset := test.New(t, 1)
