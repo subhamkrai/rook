@@ -135,6 +135,10 @@ RGW {
         name = "client.` + userID + `";
 }
 
+Ceph {
+	use_old_uuid = true;
+}
+
 %url	` + url + `
 `
 }
