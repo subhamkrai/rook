@@ -871,6 +871,9 @@ spec:
                     type: boolean
                   exporter:
                     properties:
+                      hostNetwork:
+                        nullable: true
+                        type: boolean
                       perfCountersPrioLimit:
                         default: 5
                         format: int64
