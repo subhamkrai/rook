@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/ceph/go-ceph/rgw/admin"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
@@ -40,6 +41,7 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	"github.com/rook/rook/pkg/operator/ceph/object"
+	cephObject "github.com/rook/rook/pkg/operator/ceph/object"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -136,7 +138,6 @@ func (r *ReconcileObjectStoreUser) Reconcile(context context.Context, request re
 	reconcileResponse, cephObjectStoreUser, err := r.reconcile(request)
 
 	return reporting.ReportReconcileResult(logger, r.recorder, request, &cephObjectStoreUser, reconcileResponse, err)
-
 }
 
 func (r *ReconcileObjectStoreUser) reconcile(request reconcile.Request) (reconcile.Result, cephv1.CephObjectStoreUser, error) {
@@ -303,6 +304,19 @@ func (r *ReconcileObjectStoreUser) createOrUpdateCephUser(u *cephv1.CephObjectSt
 				return errors.Wrapf(err, "failed to create ceph object user %v", &r.userConfig.ID)
 			}
 			logCreateOrUpdate = fmt.Sprintf("created ceph object user %q", u.Name)
+		} else if strings.Contains(err.Error(), "InvalidAccessKeyId") {
+			// In case of an Invalid Access Key, delete the `rgw-admin-ops-user` and restart the operator.
+			// This is a temporary fix until https://bugzilla.redhat.com/show_bug.cgi?id=2373031 is resolved.
+			logger.Errorf("failed to get Ceph Object user %q. Error: %v", u.Name, err)
+			logger.Infof("deleting the admin user %q", cephObject.RGWAdminOpsUserSecretName)
+			_, err := cephObject.DeleteUser(&r.objContext.Context, cephObject.RGWAdminOpsUserSecretName)
+			if err != nil {
+				return errors.Wrapf(err, "failed to delete admin user %q with InvalidAccessKeyID",
+					cephObject.RGWAdminOpsUserSecretName)
+			}
+			logger.Warningf("restarting the operator to recreate the %q user", cephObject.RGWAdminOpsUserSecretName)
+			// restart the rook operator so that it will recreate the `rgw-admin-ops-user`
+			opcontroller.ReloadManager()
 		} else {
 			return errors.Wrapf(err, "failed to get details from ceph object user %q", u.Name)
 		}
@@ -340,7 +354,7 @@ func (r *ReconcileObjectStoreUser) createOrUpdateCephUser(u *cephv1.CephObjectSt
 		logCreateOrUpdate = fmt.Sprintf("updated ceph object user %q", u.Name)
 	}
 
-	var quotaEnabled = false
+	quotaEnabled := false
 	var maxSize int64 = -1
 	var maxObjects int64 = -1
 	if u.Spec.Quotas != nil {
