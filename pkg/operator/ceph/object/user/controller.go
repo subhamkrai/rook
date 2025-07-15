@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
+	"time"
 
 	"github.com/ceph/go-ceph/rgw/admin"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
@@ -40,6 +42,7 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	"github.com/rook/rook/pkg/operator/ceph/object"
+	cephObject "github.com/rook/rook/pkg/operator/ceph/object"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -136,7 +139,6 @@ func (r *ReconcileObjectStoreUser) Reconcile(context context.Context, request re
 	reconcileResponse, cephObjectStoreUser, err := r.reconcile(request)
 
 	return reporting.ReportReconcileResult(logger, r.recorder, request, &cephObjectStoreUser, reconcileResponse, err)
-
 }
 
 func (r *ReconcileObjectStoreUser) reconcile(request reconcile.Request) (reconcile.Result, cephv1.CephObjectStoreUser, error) {
@@ -303,6 +305,39 @@ func (r *ReconcileObjectStoreUser) createOrUpdateCephUser(u *cephv1.CephObjectSt
 				return errors.Wrapf(err, "failed to create ceph object user %v", &r.userConfig.ID)
 			}
 			logCreateOrUpdate = fmt.Sprintf("created ceph object user %q", u.Name)
+		} else if strings.Contains(err.Error(), "InvalidAccessKeyId") {
+			cooldown := 35 * time.Second
+			// In case of an Invalid Access Key, delete the `rgw-admin-ops-user` and restart the operator.
+			// This is a temporary workaround until https://bugzilla.redhat.com/show_bug.cgi?id=2373031 is resolved.
+			logger.Errorf("failed to get Ceph Object user %q. Error: %v", u.Name, err)
+			waSuccess := false
+			// user deletion can hang due to the same underlying reasons that create fails.
+			// in testing, radosgw-admin seemed to respond more often with ~30 second periodicity,
+			// so retry the deletion workaround with 35 second cooldown hoping for better chance of success.
+			for i := range 4 {
+				logger.Infof("waiting 35 seconds before attempting to delete admin user %q attempt %d", cephObject.RGWAdminOpsUserSecretName, i)
+				time.Sleep(cooldown)
+				logger.Infof("deleting the admin user %q attempt %d", cephObject.RGWAdminOpsUserSecretName, i)
+				_, err := cephObject.DeleteUser(&r.objContext.Context, cephObject.RGWAdminOpsUserSecretName)
+				if err != nil {
+					logger.Warningf("failed to delete admin user %q with InvalidAccessKeyID: %v",
+						cephObject.RGWAdminOpsUserSecretName, err)
+					waSuccess = false
+				} else {
+					waSuccess = true
+					break // workaround succeeded
+				}
+			}
+			if waSuccess {
+				// wait 35 seconds before restarting operator in hopes that user creation will be more likely to succeed after a cooldown
+				logger.Infof("admin user %q deletion succeeded; waiting 35 seconds to retry user creation", cephObject.RGWAdminOpsUserSecretName)
+				time.Sleep(cooldown)
+				logger.Warningf("restarting the operator to recreate the %q user", cephObject.RGWAdminOpsUserSecretName)
+				// restart the rook operator so that it will recreate the `rgw-admin-ops-user`
+				opcontroller.ReloadManager()
+			} else {
+				logger.Warningf("failed to delete admin user %q with InvalidAccessKeyID after several attempts", cephObject.RGWAdminOpsUserSecretName)
+			}
 		} else {
 			return errors.Wrapf(err, "failed to get details from ceph object user %q", u.Name)
 		}
@@ -340,7 +375,7 @@ func (r *ReconcileObjectStoreUser) createOrUpdateCephUser(u *cephv1.CephObjectSt
 		logCreateOrUpdate = fmt.Sprintf("updated ceph object user %q", u.Name)
 	}
 
-	var quotaEnabled = false
+	quotaEnabled := false
 	var maxSize int64 = -1
 	var maxObjects int64 = -1
 	if u.Spec.Quotas != nil {
