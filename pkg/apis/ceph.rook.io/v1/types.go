@@ -715,7 +715,9 @@ type LocalCephxStatus struct {
 
 // ClusterCephxStatus defines the cephx key rotation status of various daemons on the cephCluster resource
 type ClusterCephxStatus struct {
-	// RBDMirrorPeer show the cephx key rotation status of the `rbd-mirror-peer` user
+	// Mgr represents the cephx key rotation status of the ceph manager daemon
+	Mgr *CephxStatus `json:"mgr,omitempty"`
+	// RBDMirrorPeer represents the cephx key rotation status of the `rbd-mirror-peer` user
 	RBDMirrorPeer *CephxStatus `json:"rbdMirrorPeer,omitempty"`
 }
 
@@ -3107,6 +3109,16 @@ type ClientSpec struct {
 	RemoveSecret bool `json:"removeSecret,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Caps map[string]string `json:"caps"`
+	// Security represents security settings
+	// +optional
+	Security ClientSecuritySpec `json:"security,omitempty"`
+}
+
+// ClinetSecuritySpec represents security settings for a Ceph Client
+type ClientSecuritySpec struct {
+	// CephX configures CephX key settings. More: https://docs.ceph.com/en/latest/dev/cephx/
+	// +optional
+	CephX CephxConfig `json:"cephx,omitempty"`
 }
 
 // CephClientStatus represents the Status of Ceph Client
@@ -3119,6 +3131,8 @@ type CephClientStatus struct {
 	// ObservedGeneration is the latest generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// +optional
+	Cephx CephxStatus `json:"cephx,omitempty"`
 }
 
 // CleanupPolicySpec represents a Ceph Cluster cleanup policy
