@@ -3274,6 +3274,14 @@ spec:
                 type: object
               cephx:
                 properties:
+                  mgr:
+                    properties:
+                      keyCephVersion:
+                        type: string
+                      keyGeneration:
+                        format: int32
+                        type: integer
+                    type: object
                   rbdMirrorPeer:
                     properties:
                       keyCephVersion:
