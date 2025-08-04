@@ -67,7 +67,18 @@ function generate_csv() {
     rm -rf "../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-operator-config_v1_configmap.yaml"
 
     # Update the "create-external-resources.py" script value in external-cluster-script-configmap
-    "${YQ_CMD_WRITE[@]}" "$EXTERNAL_CLUSTER_SCRIPT_CONFIGMAP" data.script "$(base64 <$CEPH_EXTERNAL_SCRIPT_FILE)"
+    # Use a single temp file to avoid "Argument list too long" error
+    TEMP_YAML_FILE=$(mktemp)
+
+    # Create a temporary YAML snippet with the base64 content
+    echo "data:" > "$TEMP_YAML_FILE"
+    echo "  script: |" >> "$TEMP_YAML_FILE"
+    base64 < "$CEPH_EXTERNAL_SCRIPT_FILE" | sed 's/^/    /' >> "$TEMP_YAML_FILE"
+
+    # Merge the YAML snippet into the configmap
+    "${YQ_CMD_MERGE_OVERWRITE[@]}" "$EXTERNAL_CLUSTER_SCRIPT_CONFIGMAP" "$TEMP_YAML_FILE"
+
+    rm -f "$TEMP_YAML_FILE"
 
     # This change are just to make the CSV file as it was earlier and as ocs-operator reads.
     # Skipping this change for darwin since `sed -i` doesn't work with darwin properly.
