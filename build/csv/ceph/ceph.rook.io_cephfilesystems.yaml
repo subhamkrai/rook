@@ -66,6 +66,9 @@ spec:
                     erasureCoded:
                       properties:
                         algorithm:
+                          enum:
+                          - isa
+                          - jerasure
                           type: string
                         codingChunks:
                           minimum: 0
@@ -205,6 +208,9 @@ spec:
                   erasureCoded:
                     properties:
                       algorithm:
+                        enum:
+                        - isa
+                        - jerasure
                         type: string
                       codingChunks:
                         minimum: 0

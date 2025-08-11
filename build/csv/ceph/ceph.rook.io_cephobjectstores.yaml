@@ -99,6 +99,9 @@ spec:
                   erasureCoded:
                     properties:
                       algorithm:
+                        enum:
+                        - isa
+                        - jerasure
                         type: string
                       codingChunks:
                         minimum: 0
@@ -207,6 +210,8 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
+              defaultRealm:
+                type: boolean
               gateway:
                 nullable: true
                 properties:
@@ -1376,6 +1381,9 @@ spec:
                   erasureCoded:
                     properties:
                       algorithm:
+                        enum:
+                        - isa
+                        - jerasure
                         type: string
                       codingChunks:
                         minimum: 0
@@ -1626,6 +1634,11 @@ spec:
                 - name
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: defaultRealm must not be true when zone.name is set (multisite
+                configuration)
+              rule: '!(has(self.defaultRealm) && self.defaultRealm == true && has(self.zone)
+                && size(self.zone.name) > 0)'
           status:
             properties:
               cephx:
