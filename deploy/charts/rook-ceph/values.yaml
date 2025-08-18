@@ -77,9 +77,18 @@ containerSecurityContext:
 # -- If true, loop devices are allowed to be used for osds in test clusters
 allowLoopDevices: false
 
+ceph-csi-operator:
+  nameOverride: ceph-csi
+  fullnameOverride: ceph-csi
+  controllerManager:
+    manager:
+      env:
+        csiServiceAccountPrefix: "ceph-csi-"
+
 # Settings for whether to disable the drivers or other daemons if they are not
 # needed
 csi:
+  rookUseCsiOperator: false
   # -- Enable Ceph CSI RBD driver
   enableRbdDriver: true
   # -- Enable Ceph CSI CephFS driver
@@ -539,7 +548,7 @@ csi:
     # -- CSIAddons sidecar image repository
     repository: quay.io/csiaddons/k8s-sidecar
     # -- CSIAddons sidecar image tag
-    tag: v0.12.0
+    tag: v0.13.0
 
   nfs:
     # -- Enable the nfs csi driver
