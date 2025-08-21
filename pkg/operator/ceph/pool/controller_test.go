@@ -317,6 +317,7 @@ func TestCephBlockPoolController(t *testing.T) {
 				CephStatus: &cephv1.CephStatus{
 					Health: "",
 				},
+				Cephx: &cephv1.ClusterCephxStatus{},
 			},
 		}
 
@@ -588,6 +589,7 @@ func TestDeletionBlocked(t *testing.T) {
 	)
 	blockImageCount := 0
 	rnsImageCount := 0
+	poolPresent := false
 	cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(object...).Build()
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(command string, args ...string) (string, error) {
@@ -599,6 +601,14 @@ func TestDeletionBlocked(t *testing.T) {
 						return fmt.Sprintf(response, rnsImageCount), nil
 					} else {
 						return fmt.Sprintf(response, blockImageCount), nil
+					}
+				}
+			} else if command == "ceph" && args[0] == "osd" {
+				if args[1] == "lspools" {
+					if poolPresent {
+						return fmt.Sprintf(`[{"poolnum":1,"poolname":"%s"}]`, pool.Name), nil
+					} else {
+						return "[]", nil
 					}
 				}
 			}
@@ -621,6 +631,24 @@ func TestDeletionBlocked(t *testing.T) {
 		clusterInfo:       cephclient.AdminTestClusterInfo("mycluster"),
 	}
 	cephCluster := &cephv1.CephCluster{}
+	t.Run("deletion is allowed with no pool actually present", func(t *testing.T) {
+		err := r.handleDeletionBlocked(pool, cephCluster)
+		assert.NoError(t, err)
+
+		result := &cephv1.CephBlockPool{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: pool.Name, Namespace: pool.Namespace}, result)
+		assert.NoError(t, err)
+		assert.Equal(t, pool.Name, result.Name)
+		assert.Equal(t, pool.Namespace, result.Namespace)
+		assert.Equal(t, 2, len(pool.Status.Conditions))
+		assert.Equal(t, "PoolDeletionIsBlocked", string(pool.Status.Conditions[0].Type))
+		assert.Equal(t, v1.ConditionFalse, pool.Status.Conditions[0].Status)
+		assert.Equal(t, "PoolEmpty", string(pool.Status.Conditions[0].Reason))
+		assert.Equal(t, "DeletionIsBlocked", string(pool.Status.Conditions[1].Type))
+		assert.Equal(t, v1.ConditionFalse, pool.Status.Conditions[1].Status)
+		assert.Equal(t, "ObjectHasNoDependents", string(pool.Status.Conditions[1].Reason))
+	})
+	poolPresent = true
 	t.Run("deletion is allowed with no images or rns", func(t *testing.T) {
 		err := r.handleDeletionBlocked(pool, cephCluster)
 		assert.NoError(t, err)
@@ -973,4 +1001,206 @@ func TestGenerateStatsPoolList(t *testing.T) {
 			assert.Equal(t, tt.expectedOutput, result)
 		})
 	}
+}
+
+func TestMirrorPeerKeyRotationStatus(t *testing.T) {
+	ctx := context.TODO()
+	// Set DEBUG logging
+	t.Setenv("ROOK_LOG_LEVEL", "DEBUG")
+	var (
+		name           = "my-pool"
+		namespace      = "rook-ceph"
+		replicas  uint = 3
+	)
+
+	cephCluster := &cephv1.CephCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      namespace,
+			Namespace: namespace,
+		},
+		Status: cephv1.ClusterStatus{
+			Phase: "",
+			CephVersion: &cephv1.ClusterVersion{
+				Version: "20.2.0-0",
+			},
+			CephStatus: &cephv1.CephStatus{
+				Health: "HEALTH_OK",
+			},
+			Cephx: &cephv1.ClusterCephxStatus{},
+		},
+	}
+
+	// A Pool resource with metadata and spec.
+	pool := &cephv1.CephBlockPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Namespace:  namespace,
+			UID:        types.UID("c47cac40-9bee-4d52-823b-ccd803ba5bfe"),
+			Finalizers: []string{"cephblockpool.ceph.rook.io"},
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "CephBlockPool",
+		},
+		Spec: cephv1.NamedBlockPoolSpec{
+			PoolSpec: cephv1.PoolSpec{
+				Replicated: cephv1.ReplicatedSpec{
+					Size: replicas,
+				},
+				Mirroring: cephv1.MirroringSpec{
+					Enabled: true,
+					Mode:    "image",
+					Peers:   &cephv1.MirroringPeerSpec{},
+				},
+				StatusCheck: cephv1.MirrorHealthCheckSpec{
+					Mirror: cephv1.HealthCheckSpec{
+						Disabled: true,
+					},
+				},
+			},
+		},
+		Status: &cephv1.CephBlockPoolStatus{
+			Phase: "",
+		},
+	}
+
+	// Objects to track in the fake client.
+	object := []runtime.Object{
+		pool, cephCluster,
+	}
+
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(command string, args ...string) (string, error) {
+			if args[0] == "status" {
+				return `{"fsid":"c47cac40-9bee-4d52-823b-ccd803ba5bfe","health":{"checks":{},"status":"HEALTH_OK"},"pgmap":{"num_pgs":100,"pgs_by_state":[{"state_name":"active+clean","count":100}]}}`, nil
+			}
+			if args[0] == "mirror" && args[1] == "pool" && args[2] == "peer" && args[3] == "bootstrap" && args[4] == "create" {
+				return `eyJmc2lkIjoiYzZiMDg3ZjItNzgyOS00ZGJiLWJjZmMtNTNkYzM0ZTBiMzVkIiwiY2xpZW50X2lkIjoicmJkLW1pcnJvci1wZWVyIiwia2V5IjoiQVFBV1lsWmZVQ1Q2RGhBQVBtVnAwbGtubDA5YVZWS3lyRVV1NEE9PSIsIm1vbl9ob3N0IjoiW3YyOjE5Mi4xNjguMTExLjEwOjMzMDAsdjE6MTkyLjE2OC4xMTEuMTA6Njc4OV0sW3YyOjE5Mi4xNjguMTExLjEyOjMzMDAsdjE6MTkyLjE2OC4xMTEuMTI6Njc4OV0sW3YyOjE5Mi4xNjguMTExLjExOjMzMDAsdjE6MTkyLjE2OC4xMTEuMTE6Njc4OV0ifQ==`, nil
+			}
+			if args[0] == "mirror" && args[1] == "pool" && args[2] == "info" {
+				return "{}", nil
+			}
+			return "", nil
+		},
+	}
+
+	// Register operator types with the runtime scheme.
+	s := scheme.Scheme
+	s.AddKnownTypes(cephv1.SchemeGroupVersion, &cephv1.CephBlockPool{})
+	s.AddKnownTypes(cephv1.SchemeGroupVersion, &cephv1.CephCluster{}, &cephv1.CephClusterList{})
+	s.AddKnownTypes(cephv1.SchemeGroupVersion, &cephv1.CephBlockPoolList{})
+
+	// Create a fake client to mock API calls.
+	cl := fake.NewClientBuilder().WithRuntimeObjects(object...).Build()
+
+	c := &clusterd.Context{
+		Client:        cl,
+		Executor:      executor,
+		Clientset:     testop.New(t, 1),
+		RookClientset: rookclient.NewSimpleClientset(),
+	}
+
+	// Mock clusterInfo
+	secrets := map[string][]byte{
+		"fsid":         []byte(name),
+		"mon-secret":   []byte("monsecret"),
+		"admin-secret": []byte("adminsecret"),
+	}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "rook-ceph-mon",
+			Namespace: namespace,
+		},
+		Data: secrets,
+		Type: k8sutil.RookType,
+	}
+	_, err := c.Clientset.CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	// Mock request to simulate Reconcile() being called on an event for a
+	// watched resource .
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	// Create a ReconcileCephBlockPool object with the scheme and fake client.
+	r := &ReconcileCephBlockPool{
+		client:            cl,
+		scheme:            s,
+		context:           c,
+		blockPoolContexts: make(map[string]*blockPoolHealth),
+		opManagerContext:  context.TODO(),
+		recorder:          record.NewFakeRecorder(5),
+	}
+
+	t.Setenv("POD_NAME", "test")
+	t.Setenv("POD_NAMESPACE", namespace)
+	p := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind: "ReplicaSet",
+					Name: "testReplicaSet",
+				},
+			},
+		},
+	}
+	// Create fake pod
+	_, err = r.context.Clientset.CoreV1().Pods(namespace).Create(context.TODO(), p, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	replicaSet := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testReplicaSet",
+			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind: "Deployment",
+				},
+			},
+		},
+	}
+
+	// Create fake replicaset
+	_, err = r.context.Clientset.AppsV1().ReplicaSets(namespace).Create(context.TODO(), replicaSet, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	t.Run("first reconcile - PeerToken cephx status is set to empty", func(t *testing.T) {
+		_, err := r.Reconcile(ctx, req)
+		assert.NoError(t, err)
+		pool := &cephv1.CephBlockPool{}
+		err = r.client.Get(context.TODO(), req.NamespacedName, pool)
+		assert.NoError(t, err)
+		assert.Equal(t, cephv1.CephxStatus{}, pool.Status.Cephx.PeerToken)
+	})
+
+	t.Run("subsequent reconcile - retain PeerToken cephx status", func(t *testing.T) {
+		_, err := r.Reconcile(ctx, req)
+		assert.NoError(t, err)
+		pool := &cephv1.CephBlockPool{}
+		err = r.client.Get(context.TODO(), req.NamespacedName, pool)
+		assert.NoError(t, err)
+		assert.Equal(t, cephv1.CephxStatus{}, pool.Status.Cephx.PeerToken)
+	})
+
+	t.Run("PeerToken cephx status should be updated based on the cephCluster cephx status", func(t *testing.T) {
+		RDBMirrorPeerStatus := &cephv1.CephxStatus{
+			KeyGeneration:  2,
+			KeyCephVersion: "20.2.0-0",
+		}
+
+		cephCluster.Status.Cephx.RBDMirrorPeer = RDBMirrorPeerStatus
+		err := r.client.Update(context.TODO(), cephCluster)
+		assert.NoError(t, err)
+		_, err = r.Reconcile(ctx, req)
+		assert.NoError(t, err)
+		pool := &cephv1.CephBlockPool{}
+		err = r.client.Get(context.TODO(), req.NamespacedName, pool)
+		assert.NoError(t, err)
+		assert.Equal(t, *RDBMirrorPeerStatus, pool.Status.Cephx.PeerToken)
+	})
 }

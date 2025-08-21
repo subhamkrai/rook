@@ -1611,6 +1611,23 @@ spec:
                             - KeyGeneration
                             type: string
                         type: object
+                      rbdMirrorPeer:
+                        properties:
+                          keyGeneration:
+                            format: int32
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                            x-kubernetes-validations:
+                            - message: keyGeneration cannot be decreased
+                              rule: self >= oldSelf
+                          keyRotationPolicy:
+                            enum:
+                            - ""
+                            - Disabled
+                            - KeyGeneration
+                            type: string
+                        type: object
                     type: object
                   keyRotation:
                     nullable: true
@@ -3322,6 +3339,14 @@ spec:
                         type: integer
                     type: object
                   mgr:
+                    properties:
+                      keyCephVersion:
+                        type: string
+                      keyGeneration:
+                        format: int32
+                        type: integer
+                    type: object
+                  mon:
                     properties:
                       keyCephVersion:
                         type: string

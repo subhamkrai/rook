@@ -20,7 +20,6 @@ import (
 	"context"
 	"os"
 	"reflect"
-	"runtime/debug"
 	"strings"
 
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
@@ -35,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateUpdateClientProfileRadosNamespace(ctx context.Context, c client.Client, clusterInfo *cephclient.ClusterInfo, cephBlockPoolRadosNamespaceName, clusterID, clusterName string) error {
+func CreateUpdateClientProfileRadosNamespace(ctx context.Context, c client.Client, clusterInfo *cephclient.ClusterInfo, cephBlockPoolRadosNamespaceName, clusterID string) error {
 	logger.Info("creating ceph-csi clientProfile CR for rados namespace")
 
 	csiOpClientProfile := &csiopv1.ClientProfile{}
@@ -43,10 +42,16 @@ func CreateUpdateClientProfileRadosNamespace(ctx context.Context, c client.Clien
 	csiOpClientProfile.Namespace = os.Getenv(k8sutil.PodNamespaceEnvVar)
 	csiOpClientProfile.Spec = csiopv1.ClientProfileSpec{
 		CephConnectionRef: v1.LocalObjectReference{
-			Name: clusterName,
+			Name: clusterInfo.Namespace,
 		},
 		Rbd: &csiopv1.RbdConfigSpec{
 			RadosNamespace: cephBlockPoolRadosNamespaceName,
+			CephCsiSecrets: &csiopv1.CephCsiSecretsSpec{
+				ControllerPublishSecret: v1.SecretReference{
+					Name:      CsiRBDProvisionerSecret,
+					Namespace: clusterInfo.Namespace,
+				},
+			},
 		},
 	}
 
@@ -72,10 +77,10 @@ func CreateUpdateClientProfileRadosNamespace(ctx context.Context, c client.Clien
 	return nil
 }
 
-func CreateUpdateClientProfileSubVolumeGroup(ctx context.Context, c client.Client, clusterInfo *cephclient.ClusterInfo, cephFilesystemSubVolumeGroupName, clusterID, clusterName string) error {
+func CreateUpdateClientProfileSubVolumeGroup(ctx context.Context, c client.Client, clusterInfo *cephclient.ClusterInfo, cephFilesystemSubVolumeGroupName, clusterID string) error {
 	logger.Info("Creating ceph-csi clientProfile CR for subvolume group")
 
-	csiOpClientProfile := generateProfileSubVolumeGroupSpec(clusterInfo, cephFilesystemSubVolumeGroupName, clusterID, clusterName)
+	csiOpClientProfile := generateProfileSubVolumeGroupSpec(clusterInfo, cephFilesystemSubVolumeGroupName, clusterID)
 
 	err := c.Get(ctx, types.NamespacedName{Name: csiOpClientProfile.Name, Namespace: csiOpClientProfile.Namespace}, csiOpClientProfile)
 	if err != nil {
@@ -99,16 +104,22 @@ func CreateUpdateClientProfileSubVolumeGroup(ctx context.Context, c client.Clien
 	return nil
 }
 
-func generateProfileSubVolumeGroupSpec(clusterInfo *cephclient.ClusterInfo, cephFilesystemSubVolumeGroupName, clusterID, clusterName string) *csiopv1.ClientProfile {
+func generateProfileSubVolumeGroupSpec(clusterInfo *cephclient.ClusterInfo, cephFilesystemSubVolumeGroupName, clusterID string) *csiopv1.ClientProfile {
 	csiOpClientProfile := &csiopv1.ClientProfile{}
 	csiOpClientProfile.Name = clusterID
 	csiOpClientProfile.Namespace = os.Getenv(k8sutil.PodNamespaceEnvVar)
 	csiOpClientProfile.Spec = csiopv1.ClientProfileSpec{
 		CephConnectionRef: v1.LocalObjectReference{
-			Name: clusterName,
+			Name: clusterInfo.Namespace,
 		},
 		CephFs: &csiopv1.CephFsConfigSpec{
 			SubVolumeGroup: cephFilesystemSubVolumeGroupName,
+			CephCsiSecrets: &csiopv1.CephCsiSecretsSpec{
+				ControllerPublishSecret: v1.SecretReference{
+					Name:      CsiCephFSProvisionerSecret,
+					Namespace: clusterInfo.Namespace,
+				},
+			},
 		},
 	}
 
@@ -126,22 +137,14 @@ func generateProfileSubVolumeGroupSpec(clusterInfo *cephclient.ClusterInfo, ceph
 }
 
 // CreateDefaultClientProfile creates a default client profile for csi-operator to connect driver
-func CreateDefaultClientProfile(c client.Client, clusterInfo *cephclient.ClusterInfo, namespaced types.NamespacedName) error {
+func CreateDefaultClientProfile(c client.Client, clusterInfo *cephclient.ClusterInfo) error {
 	logger.Info("Creating ceph-csi clientProfile default CR")
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Errorf("Panic when creating the default client profile: %+v", r)
-			logger.Errorf("Stack trace:")
-			logger.Errorf("%s", string(debug.Stack()))
-		}
-	}()
-
 	csiOpClientProfile := &csiopv1.ClientProfile{}
 	csiOpClientProfile.Name = clusterInfo.Namespace
 	csiOpClientProfile.Namespace = os.Getenv(k8sutil.PodNamespaceEnvVar)
 	csiOpClientProfile.Spec = csiopv1.ClientProfileSpec{
 		CephConnectionRef: v1.LocalObjectReference{
-			Name: namespaced.Name,
+			Name: clusterInfo.Namespace,
 		},
 	}
 
@@ -161,6 +164,29 @@ func CreateDefaultClientProfile(c client.Client, clusterInfo *cephclient.Cluster
 				}
 			}
 		}
+	}
+
+	// set cephFS ControllerPublish Secret
+	if csiOpClientProfile.Spec.CephFs == nil {
+		csiOpClientProfile.Spec.CephFs = &csiopv1.CephFsConfigSpec{}
+	}
+
+	csiOpClientProfile.Spec.CephFs.CephCsiSecrets = &csiopv1.CephCsiSecretsSpec{
+		ControllerPublishSecret: v1.SecretReference{
+			Name:      CsiCephFSProvisionerSecret,
+			Namespace: clusterInfo.Namespace,
+		},
+	}
+	if csiOpClientProfile.Spec.Rbd == nil {
+		csiOpClientProfile.Spec.Rbd = &csiopv1.RbdConfigSpec{}
+	}
+
+	// set RBD ControllerPublish Secret
+	csiOpClientProfile.Spec.Rbd.CephCsiSecrets = &csiopv1.CephCsiSecretsSpec{
+		ControllerPublishSecret: v1.SecretReference{
+			Name:      CsiRBDProvisionerSecret,
+			Namespace: clusterInfo.Namespace,
+		},
 	}
 
 	err := c.Get(clusterInfo.Context, types.NamespacedName{Name: csiOpClientProfile.Name, Namespace: csiOpClientProfile.Namespace}, csiOpClientProfile)
