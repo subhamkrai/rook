@@ -94,6 +94,8 @@ parameters:
   csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
   csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
   csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+  csi.storage.k8s.io/controller-publish-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/controller-publish-secret-namespace: rook-ceph
   csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
   csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
 
@@ -225,11 +227,6 @@ You can do that using the following recipe.
 
 ### Shared volume creation
 
-* In the `rook` namespace, create a copy of the secret `rook-csi-cephfs-node`, name it `rook-csi-cephfs-node-user`
-.
-* Edit your new secret, changing the name of the keys (keep the value as it is):
-    * `adminID` -> `userID`
-    * `adminKey` -> `userKey`
 * Create the PVC you want to share, for example:
 
 ```yaml
@@ -299,7 +296,6 @@ spec:
     * Modify the volumeHandle. Again append the targeted namespace.
     * Add the `staticVolume: "true"` entry to the volumeAttributes.
     * Add the rootPath entry to the volumeAttributes, with the same content as `subvolumePath`.
-    * In the `nodeStageSecretRef` section, change the name to point to the secret you created earlier, `rook-csi-cephfs-node-user`.
     * Remove the unnecessary information before applying the YAML (claimRef, managedFields,...):
 
 Your YAML should look like this:
