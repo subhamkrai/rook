@@ -46,6 +46,9 @@ The following table lists the configurable parameters of the rook-operator chart
 |-----------|-------------|---------|
 | `allowLoopDevices` | If true, loop devices are allowed to be used for osds in test clusters | `false` |
 | `annotations` | Pod annotations | `{}` |
+| `ceph-csi-operator.controllerManager.manager.env.csiServiceAccountPrefix` |  | `"ceph-csi-"` |
+| `ceph-csi-operator.fullnameOverride` |  | `"ceph-csi"` |
+| `ceph-csi-operator.nameOverride` |  | `"ceph-csi"` |
 | `cephCommandsTimeoutSeconds` | The timeout for ceph commands in seconds | `"15"` |
 | `containerSecurityContext` | Set the container security context for the operator | `{"capabilities":{"drop":["ALL"]},"runAsGroup":2016,"runAsNonRoot":true,"runAsUser":2016}` |
 | `crds.enabled` | Whether the helm chart should create and update the CRDs. If false, the CRDs must be managed independently with deploy/examples/crds.yaml. **WARNING** Only set during first deployment. If later disabled the cluster may be DESTROYED. If the CRDs are deleted in this case, see [the disaster recovery guide](https://rook.io/docs/rook/latest/Troubleshooting/disaster-recovery/#restoring-crds-after-deletion) to restore them. | `true` |
@@ -57,14 +60,14 @@ The following table lists the configurable parameters of the rook-operator chart
 | `csi.cephFSPluginUpdateStrategy` | CSI CephFS plugin daemonset update strategy, supported values are OnDelete and RollingUpdate | `RollingUpdate` |
 | `csi.cephFSPluginUpdateStrategyMaxUnavailable` | A maxUnavailable parameter of CSI cephFS plugin daemonset update strategy. | `1` |
 | `csi.cephcsi.repository` | Ceph CSI image repository | `"quay.io/cephcsi/cephcsi"` |
-| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.14.2"` |
+| `csi.cephcsi.tag` | Ceph CSI image tag | `"v3.15.0"` |
 | `csi.cephfsLivenessMetricsPort` | CSI CephFS driver metrics port | `9081` |
 | `csi.cephfsPodLabels` | Labels to add to the CSI CephFS Deployments and DaemonSets Pods | `nil` |
 | `csi.clusterName` | Cluster name identifier to set as metadata on the CephFS subvolume and RBD images. This will be useful in cases like for example, when two container orchestrator clusters (Kubernetes/OCP) are using a single ceph cluster | `nil` |
 | `csi.crossNamespaceVolumeDataSource.enabled` | Enable cross namespace volume data source provisioning | `false` |
 | `csi.csiAddons.enabled` | Enable CSIAddons | `false` |
 | `csi.csiAddons.repository` | CSIAddons sidecar image repository | `"quay.io/csiaddons/k8s-sidecar"` |
-| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.12.0"` |
+| `csi.csiAddons.tag` | CSIAddons sidecar image tag | `"v0.13.0"` |
 | `csi.csiAddonsCephFSProvisionerPort` | CSI Addons server port for the Ceph FS provisioner | `9070` |
 | `csi.csiAddonsPort` | CSI Addons server port | `9070` |
 | `csi.csiAddonsRBDProvisionerPort` | CSI Addons server port for the RBD provisioner | `9070` |
@@ -126,6 +129,7 @@ The following table lists the configurable parameters of the rook-operator chart
 | `csi.registrar.tag` | Registrar image tag | `"v2.13.0"` |
 | `csi.resizer.repository` | Kubernetes CSI resizer image repository | `"registry.k8s.io/sig-storage/csi-resizer"` |
 | `csi.resizer.tag` | Resizer image tag | `"v1.13.2"` |
+| `csi.rookUseCsiOperator` |  | `true` |
 | `csi.serviceMonitor.enabled` | Enable ServiceMonitor for Ceph CSI drivers | `false` |
 | `csi.serviceMonitor.interval` | Service monitor scrape interval | `"10s"` |
 | `csi.serviceMonitor.labels` | ServiceMonitor additional labels | `{}` |

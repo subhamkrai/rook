@@ -19,7 +19,6 @@ package csi
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"path"
 	"strings"
 	"time"
@@ -133,13 +132,13 @@ var (
 // manually challenging.
 var (
 	// image names
-	DefaultCSIPluginImage   = "quay.io/cephcsi/cephcsi:v3.14.2"
+	DefaultCSIPluginImage   = "quay.io/cephcsi/cephcsi:v3.15.0"
 	DefaultRegistrarImage   = "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0"
 	DefaultProvisionerImage = "registry.k8s.io/sig-storage/csi-provisioner:v5.2.0"
 	DefaultAttacherImage    = "registry.k8s.io/sig-storage/csi-attacher:v4.8.1"
 	DefaultSnapshotterImage = "registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1"
 	DefaultResizerImage     = "registry.k8s.io/sig-storage/csi-resizer:v1.13.2"
-	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.12.0"
+	DefaultCSIAddonsImage   = "quay.io/csiaddons/k8s-sidecar:v0.13.0"
 
 	// image pull policy
 	DefaultCSIImagePullPolicy = string(corev1.PullIfNotPresent)
@@ -312,26 +311,6 @@ func (r *ReconcileCSI) startDrivers(ownerInfo *k8sutil.OwnerInfo) error {
 		Param:     CSIParam,
 		Namespace: r.opConfig.OperatorNamespace,
 	}
-
-	if strings.HasSuffix(tp.DriverNamePrefix, ".") {
-		// As operator is adding a dot at the end of the prefix, we should not
-		// allow the user to add a dot at the end of the prefix. as it will
-		// result in two dots at the end of the prefix. which cases the csi
-		// driver name creation failure
-		return errors.Errorf("driver name prefix %q should not end with a dot", tp.DriverNamePrefix)
-	}
-
-	err = validateCSIDriverNamePrefix(r.opManagerContext, r.context.Clientset, r.opConfig.OperatorNamespace, tp.DriverNamePrefix)
-	if err != nil {
-		return err
-	}
-	// Add a dot at the end of the prefix for having the driver name prefix
-	// with format <prefix>.<driver-name>
-	tp.DriverNamePrefix = fmt.Sprintf("%s.", tp.DriverNamePrefix)
-
-	CephFSDriverName = tp.DriverNamePrefix + cephFSDriverSuffix
-	RBDDriverName = tp.DriverNamePrefix + rbdDriverSuffix
-	NFSDriverName = tp.DriverNamePrefix + nfsDriverSuffix
 
 	tp.Param.MountCustomCephConf = CustomCSICephConfigExists
 
@@ -712,9 +691,6 @@ func (r *ReconcileCSI) deleteCSIDriverResources(daemonset, deployment, service s
 }
 
 func (r *ReconcileCSI) deleteCSIDriverObject() error {
-	RBDDriverName = fmt.Sprintf("%s.rbd.csi.ceph.com", r.opConfig.OperatorNamespace)
-	CephFSDriverName = fmt.Sprintf("%s.cephfs.csi.ceph.com", r.opConfig.OperatorNamespace)
-	NFSDriverName = fmt.Sprintf("%s.nfs.csi.ceph.com", r.opConfig.OperatorNamespace)
 	driverNames := []string{RBDDriverName, CephFSDriverName, NFSDriverName}
 
 	for _, driverName := range driverNames {
