@@ -90,12 +90,20 @@ users:
   # A user needs to be added for each rook service account.
   # This assumes running in the default sample "rook-ceph" namespace.
   # If other namespaces or service accounts are configured, they need to be updated here.
+  # Service accounts for the cephcsi driver (pre-cephcsi operator)
   - system:serviceaccount:rook-ceph:rook-csi-rbd-plugin-sa # serviceaccount:namespace:operator
   - system:serviceaccount:rook-ceph:rook-csi-rbd-provisioner-sa # serviceaccount:namespace:operator
   - system:serviceaccount:rook-ceph:rook-csi-cephfs-plugin-sa # serviceaccount:namespace:operator
   - system:serviceaccount:rook-ceph:rook-csi-cephfs-provisioner-sa # serviceaccount:namespace:operator
   - system:serviceaccount:rook-ceph:rook-csi-nfs-plugin-sa # serviceaccount:namespace:operator
   - system:serviceaccount:rook-ceph:rook-csi-nfs-provisioner-sa # serviceaccount:namespace:operator
+  # Service accounts for the csi operator
+  - system:serviceaccount:rook-ceph:ceph-csi-cephfs-ctrlplugin-sa # serviceaccount:namespace:operator
+  - system:serviceaccount:rook-ceph:ceph-csi-cephfs-nodeplugin-sa # serviceaccount:namespace:operator
+  - system:serviceaccount:rook-ceph:ceph-csi-nfs-ctrlplugin-sa # serviceaccount:namespace:operator
+  - system:serviceaccount:rook-ceph:ceph-csi-nfs-nodeplugin-sa # serviceaccount:namespace:operator
+  - system:serviceaccount:rook-ceph:ceph-csi-rbd-ctrlplugin-sa # serviceaccount:namespace:operator
+  - system:serviceaccount:rook-ceph:ceph-csi-rbd-nodeplugin-sa # serviceaccount:namespace:operator
 ---
 # Rook Ceph Operator Config
 # Use this ConfigMap to override operator configurations
@@ -113,6 +121,9 @@ data:
 
   # Allow using loop devices for osds in test clusters.
   ROOK_CEPH_ALLOW_LOOP_DEVICES: "false"
+
+  # Enable CSI Operator
+  ROOK_USE_CSI_OPERATOR: "true"
 
   # Enable the CSI driver.
   # To run the non-default version of the CSI driver, see the override-able image properties in operator.yaml
@@ -189,7 +200,7 @@ data:
   # The default version of CSI supported by Rook will be started. To change the version
   # of the CSI driver to something other than what is officially supported, change
   # these images to the desired release of the CSI driver.
-  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.14.2"
+  # ROOK_CSI_CEPH_IMAGE: "quay.io/cephcsi/cephcsi:v3.15.0"
   # ROOK_CSI_REGISTRAR_IMAGE: "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0"
   # ROOK_CSI_RESIZER_IMAGE: "registry.k8s.io/sig-storage/csi-resizer:v1.13.2"
   # ROOK_CSI_PROVISIONER_IMAGE: "registry.k8s.io/sig-storage/csi-provisioner:v5.2.0"

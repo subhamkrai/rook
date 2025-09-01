@@ -59,11 +59,9 @@ const (
 
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", controllerName)
 
-var cephBlockPoolKind = reflect.TypeOf(cephv1.CephBlockPool{}).Name()
-
 // Sets the type meta for the controller main object
 var controllerTypeMeta = metav1.TypeMeta{
-	Kind:       cephBlockPoolKind,
+	Kind:       reflect.TypeFor[cephv1.CephBlockPool]().Name(),
 	APIVersion: fmt.Sprintf("%s/%s", cephv1.CustomResourceGroup, cephv1.Version),
 }
 
@@ -364,7 +362,7 @@ func (r *ReconcileCephBlockPool) reconcile(request reconcile.Request) (reconcile
 		}
 
 		// update rbdMirror cephXStatus immediately after bootstrapping the peer token
-		statusErr = r.updateStatus(request.NamespacedName, cephv1.ConditionProgressing, observedGeneration, cephCluster.Status.Cephx.RBDMirrorPeer)
+		statusErr = r.updateStatus(request.NamespacedName, cephv1.ConditionProgressing, observedGeneration, &cephCluster.Status.Cephx.RBDMirrorPeer)
 		if statusErr != nil {
 			return opcontroller.ImmediateRetryResult, *cephBlockPool, errors.Wrapf(statusErr, "failed to update %q status to %q", request.NamespacedName, cephv1.ConditionProgressing)
 		}
