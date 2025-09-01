@@ -1426,8 +1426,8 @@ string
 <td>
 <code>status</code><br/>
 <em>
-<a href="#ceph.rook.io/v1.Status">
-Status
+<a href="#ceph.rook.io/v1.FileMirrorStatus">
+FileMirrorStatus
 </a>
 </em>
 </td>
@@ -5101,6 +5101,19 @@ CSI key rotation can affect existing PV connections, so take care when exercisin
 <tbody>
 <tr>
 <td>
+<code>admin</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.CephxStatus">
+CephxStatus
+</a>
+</em>
+</td>
+<td>
+<p>Admin shows the CephX key status for the client.admin key</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>mon</code><br/>
 <em>
 <a href="#ceph.rook.io/v1.CephxStatus">
@@ -5140,19 +5153,6 @@ CephxStatus
 </tr>
 <tr>
 <td>
-<code>rbdMirrorPeer</code><br/>
-<em>
-<a href="#ceph.rook.io/v1.CephxStatus">
-CephxStatus
-</a>
-</em>
-</td>
-<td>
-<p>RBDMirrorPeer represents the cephx key rotation status of the <code>rbd-mirror-peer</code> user</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>csi</code><br/>
 <em>
 <a href="#ceph.rook.io/v1.CephxStatusWithKeyCount">
@@ -5162,6 +5162,19 @@ CephxStatusWithKeyCount
 </td>
 <td>
 <p>CSI shows the CephX key status for Ceph-CSI components.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>rbdMirrorPeer</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.CephxStatus">
+CephxStatus
+</a>
+</em>
+</td>
+<td>
+<p>RBDMirrorPeer represents the cephx key rotation status of the <code>rbd-mirror-peer</code> user</p>
 </td>
 </tr>
 <tr>
@@ -6853,6 +6866,51 @@ MirroringPeerSpec
 <p>Retention is the retention policy for a snapshot schedule
 One path has exactly one retention policy.
 A policy can however contain multiple count-time period pairs in order to specify complex retention policies</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ceph.rook.io/v1.FileMirrorStatus">FileMirrorStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephFilesystemMirror">CephFilesystemMirror</a>)
+</p>
+<div>
+<p>FileMirrorStatus represents the status of the FileSystem mirror resource</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Status</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.Status">
+Status
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Status</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cephx</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.LocalCephxStatus">
+LocalCephxStatus
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -8756,7 +8814,7 @@ int
 <h3 id="ceph.rook.io/v1.LocalCephxStatus">LocalCephxStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephFilesystemStatus">CephFilesystemStatus</a>, <a href="#ceph.rook.io/v1.ObjectStoreStatus">ObjectStoreStatus</a>, <a href="#ceph.rook.io/v1.RBDMirrorStatus">RBDMirrorStatus</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephFilesystemStatus">CephFilesystemStatus</a>, <a href="#ceph.rook.io/v1.FileMirrorStatus">FileMirrorStatus</a>, <a href="#ceph.rook.io/v1.ObjectStoreStatus">ObjectStoreStatus</a>, <a href="#ceph.rook.io/v1.RBDMirrorStatus">RBDMirrorStatus</a>)
 </p>
 <div>
 </div>
@@ -14050,7 +14108,7 @@ int
 <h3 id="ceph.rook.io/v1.Status">Status
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephBucketNotification">CephBucketNotification</a>, <a href="#ceph.rook.io/v1.CephFilesystemMirror">CephFilesystemMirror</a>, <a href="#ceph.rook.io/v1.CephNFS">CephNFS</a>, <a href="#ceph.rook.io/v1.CephObjectRealm">CephObjectRealm</a>, <a href="#ceph.rook.io/v1.CephObjectZone">CephObjectZone</a>, <a href="#ceph.rook.io/v1.CephObjectZoneGroup">CephObjectZoneGroup</a>, <a href="#ceph.rook.io/v1.RBDMirrorStatus">RBDMirrorStatus</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephBucketNotification">CephBucketNotification</a>, <a href="#ceph.rook.io/v1.CephNFS">CephNFS</a>, <a href="#ceph.rook.io/v1.CephObjectRealm">CephObjectRealm</a>, <a href="#ceph.rook.io/v1.CephObjectZone">CephObjectZone</a>, <a href="#ceph.rook.io/v1.CephObjectZoneGroup">CephObjectZoneGroup</a>, <a href="#ceph.rook.io/v1.FileMirrorStatus">FileMirrorStatus</a>, <a href="#ceph.rook.io/v1.RBDMirrorStatus">RBDMirrorStatus</a>)
 </p>
 <div>
 <p>Status represents the status of an object</p>

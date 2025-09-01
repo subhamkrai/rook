@@ -236,6 +236,18 @@ func add(opManagerContext context.Context, mgr manager.Manager, r reconcile.Reco
 		logger.Info("hotplug orchestration disabled")
 	}
 
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.ConfigMap{TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: corev1.SchemeGroupVersion.String()}},
+			handler.TypedEnqueueRequestsFromMapFunc(cmHandler),
+			predicateForOperatorConfigCMWatcher(),
+		),
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -383,13 +395,6 @@ func (c *ClusterController) reconcileCephCluster(clusterObj *cephv1.CephCluster,
 	if clusterObj.Spec.CleanupPolicy.HasDataDirCleanPolicy() {
 		logger.Infof("skipping orchestration for cluster object %q in namespace %q because its cleanup policy is set", clusterObj.Name, clusterObj.Namespace)
 		return nil
-	}
-
-	if clusterObj.Status.Cephx == nil {
-		err := initClusterCephxStatus(c.context, clusterObj)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialized cluster cephx status")
-		}
 	}
 
 	cluster, ok := c.clusterMap[clusterObj.Namespace]

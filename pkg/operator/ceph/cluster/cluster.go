@@ -50,6 +50,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -203,6 +204,9 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 		if err != nil {
 			if errors.Is(err, controller.ClusterInfoNoClusterNoSecret) {
 				logger.Info("clusterInfo not yet found, must be a new cluster.")
+				// ClusterInfoNoClusterNoSecret should return nil clusterInfo, but this is a
+				// mandatory condition for recoverPriorAdminCephxKeyRotation() below, so ensure it
+				clusterInfo = nil
 			} else {
 				return errors.Wrap(err, "failed to load cluster info")
 			}
@@ -210,7 +214,21 @@ func (c *ClusterController) initializeCluster(cluster *cluster) error {
 			clusterInfo.OwnerInfo = cluster.ownerInfo
 			clusterInfo.SetName(c.namespacedName.Name)
 			cluster.ClusterInfo = clusterInfo
+			if cluster.mons.ClusterInfo == nil {
+				// ClusterInfo stored in cluster.mons can be lost from the object stored in the
+				// clusterMap during admin key rotation corner cases. rehydrate it if needed
+				logger.Debugf("applying missing ClusterInfo to tracked mons info for cluster in namespace %q", cluster.Namespace)
+				cluster.mons.ClusterInfo = clusterInfo
+			}
 		}
+
+		// if necessary, recover from failed/interrupted admin key rotation
+		// this must be done before any ceph cli commands are run
+		err = recoverPriorAdminCephxKeyRotation(c.context, clusterInfo, cluster.ownerInfo, cluster.Namespace)
+		if err != nil {
+			return errors.Wrap(err, "failed to recover from prior admin cephx key rotation")
+		}
+
 		// If the local cluster has already been configured, immediately start monitoring the cluster.
 		// Test if the cluster has already been configured if the mgr deployment has been created.
 		// If the mgr does not exist, the mons have never been verified to be in quorum.
@@ -453,6 +471,11 @@ func (c *cluster) replaceDefaultCrushMap(newRoot string) (err error) {
 
 // preMonStartupActions is a collection of actions to run before the monitors are reconciled.
 func (c *cluster) preMonStartupActions(cephVersion cephver.CephVersion) error {
+	err := initClusterCephxStatus(c)
+	if err != nil {
+		return errors.Wrap(err, "failed to initialized cluster cephx status")
+	}
+
 	return nil
 }
 
@@ -460,9 +483,16 @@ func (c *cluster) preMonStartupActions(cephVersion cephver.CephVersion) error {
 // It gets executed right after the main mon Start() method
 // Basically, it is executed between the monitors and the manager sequence
 func (c *cluster) postMonStartupActions() error {
+	// full cluster spec/status will be used to inform various cephx rotations
 	clusterObj := &cephv1.CephCluster{}
 	if err := c.context.Client.Get(c.ClusterInfo.Context, c.ClusterInfo.NamespacedName(), clusterObj); err != nil {
 		return errors.Wrapf(err, "failed to get cluster %v.", c.ClusterInfo.NamespacedName())
+	}
+
+	// rotate admin key first thing after mons are updated
+	err := rotateAdminCephxKey(c.context, c.ClusterInfo, c.ownerInfo, clusterObj) // TODO: rename?
+	if err != nil {
+		return errors.Wrapf(err, "failed to rotate admin cephx key")
 	}
 
 	// rotate mon cephx keys if required
@@ -728,9 +758,7 @@ func (c *cluster) configureMsgr2() error {
 	}
 	monStore := config.GetMonStore(c.context, c.ClusterInfo)
 
-	encryptionEnabled := c.Spec.Network.Connections != nil &&
-		c.Spec.Network.Connections.Encryption != nil &&
-		c.Spec.Network.Connections.Encryption.Enabled
+	encryptionEnabled := c.Spec.NetworkEncryptionEnabled()
 
 	if encryptionEnabled {
 		logger.Infof("setting msgr2 encryption mode to %q", encryptionSetting)
@@ -815,24 +843,52 @@ func (c *cluster) fetchSecretValue(selector v1.SecretKeySelector) (string, error
 	return string(val), nil
 }
 
-// initClusterCephxStatus set `Uninitialized` state for the cephXstatus for new clusters.
-func initClusterCephxStatus(c *clusterd.Context, cluster *cephv1.CephCluster) error {
-	uninitializedStatus := keyring.UninitializedCephxStatus()
-	cluster.Status.Cephx = &cephv1.ClusterCephxStatus{
-		OSD:           &uninitializedStatus,
-		RBDMirrorPeer: &uninitializedStatus,
-		Mgr:           &uninitializedStatus,
-		Mon:           &uninitializedStatus,
-		CSI: &cephv1.CephxStatusWithKeyCount{
-			CephxStatus: uninitializedStatus,
-		},
-		CrashCollector: &uninitializedStatus,
-		CephExporter:   &uninitializedStatus,
+// initClusterCephxStatus set `Uninitialized` cephx status for new clusters.
+// this should not be run for external mode clusters
+func initClusterCephxStatus(c *cluster) error {
+	initErr := c.ClusterInfo.IsInitialized()
+	if initErr == nil {
+		logger.Debugf("not setting uninitialized cephx status on already initialized CephCluster in namespace %q", c.Namespace)
+		return nil
+	}
+	if c.ClusterInfo.Context.Err() != nil {
+		// most IsInitialized() errors mean the cluster is new, but if clusterInfo.Context is
+		// nil, it is a 'real' error to return
+		return c.ClusterInfo.Context.Err()
 	}
 
-	if err := reporting.UpdateStatus(c.Client, cluster); err != nil {
-		return errors.Wrapf(err, "failed to update cluster cephx status")
-	}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		clusterObj := &cephv1.CephCluster{}
+		err := c.context.Client.Get(c.ClusterInfo.Context, c.namespacedName, clusterObj)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get cluster in order to initialize its cephx status")
+		}
 
-	return nil
+		emptyStatus := cephv1.CephxStatus{}
+		// mon cephx status is one of the first set after mons are successfully running, so we only need to check it
+		if clusterObj.Status.Cephx.Mon != emptyStatus {
+			return nil // do not initialize multiple times
+		}
+
+		uninitializedStatus := keyring.UninitializedCephxStatus()
+		logger.Infof("initializing cephx status for CephCluster in namespace %q", c.Namespace)
+		clusterObj.Status.Cephx = cephv1.ClusterCephxStatus{
+			Mon: uninitializedStatus,
+			Mgr: uninitializedStatus,
+			// OSD statuses are determined entirely within OSD reconcile - don't set uninitialized here
+			CSI: cephv1.CephxStatusWithKeyCount{
+				CephxStatus: uninitializedStatus,
+			},
+			RBDMirrorPeer:  uninitializedStatus,
+			CrashCollector: uninitializedStatus,
+			CephExporter:   uninitializedStatus,
+		}
+
+		if err := reporting.UpdateStatus(c.context.Client, clusterObj); err != nil {
+			return errors.Wrapf(err, "failed to initialize cluster cephx status")
+		}
+
+		return nil
+	})
+	return err
 }
