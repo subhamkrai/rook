@@ -694,9 +694,6 @@ func (r *ReconcileCSI) deleteCSIDriverResources(daemonset, deployment, service s
 }
 
 func (r *ReconcileCSI) deleteCSIDriverObject() error {
-	RBDDriverName = fmt.Sprintf("%s.rbd.csi.ceph.com", r.opConfig.OperatorNamespace)
-	CephFSDriverName = fmt.Sprintf("%s.cephfs.csi.ceph.com", r.opConfig.OperatorNamespace)
-	NFSDriverName = fmt.Sprintf("%s.nfs.csi.ceph.com", r.opConfig.OperatorNamespace)
 	driverNames := []string{RBDDriverName, CephFSDriverName, NFSDriverName}
 
 	for _, driverName := range driverNames {
