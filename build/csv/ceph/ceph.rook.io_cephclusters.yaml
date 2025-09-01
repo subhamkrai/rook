@@ -3312,6 +3312,14 @@ spec:
                 type: object
               cephx:
                 properties:
+                  admin:
+                    properties:
+                      keyCephVersion:
+                        type: string
+                      keyGeneration:
+                        format: int32
+                        type: integer
+                    type: object
                   cephExporter:
                     properties:
                       keyCephVersion:
