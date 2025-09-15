@@ -93,6 +93,7 @@ spec:
                     nullable: true
                     type: string
                   enableCrushUpdates:
+                    nullable: true
                     type: boolean
                   enableRBDStats:
                     type: boolean
@@ -1375,6 +1376,7 @@ spec:
                     nullable: true
                     type: string
                   enableCrushUpdates:
+                    nullable: true
                     type: boolean
                   enableRBDStats:
                     type: boolean
