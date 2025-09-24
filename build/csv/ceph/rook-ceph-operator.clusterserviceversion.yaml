@@ -385,8 +385,7 @@ spec:
         version: v1
         displayName: Ceph COSI Driver
         description: Represents a Ceph COSI Driver.
-  description: |2
-
+  description: |
     The Rook-Ceph storage operator packages, deploys, manages, upgrades and scales Ceph storage for providing persistent storage to infrastructure services (Logging, Metrics, Registry) as well as stateful applications in Kubernetes clusters.
 
     ## Rook-Ceph Storage Operator
@@ -1477,15 +1476,13 @@ spec:
                             key: ROOK_CSI_DISABLE_DRIVER
                             name: ocs-operator-config
                       - name: CSI_PROVISIONER_TOLERATIONS
-                        value: |2-
-
+                        value: |-
                           - key: node.ocs.openshift.io/storage
                             operator: Equal
                             value: "true"
                             effect: NoSchedule
                       - name: CSI_PLUGIN_TOLERATIONS
-                        value: |2-
-
+                        value: |-
                           - key: node.ocs.openshift.io/storage
                             operator: Equal
                             value: "true"
