@@ -22,8 +22,6 @@ REGISTRY_NAME = quay.io
 BASEIMAGE = $(REGISTRY_NAME)/ceph/ceph:$(CEPH_VERSION)
 CEPH_IMAGE = $(BUILD_REGISTRY)/ceph-$(GOARCH)
 OPERATOR_SDK_VERSION = v1.25.0
-# TODO: update to yq v4 - v3 end of life in Aug 2021 ; v4 removes the 'yq delete' cmd and changes syntax
-YQv3_VERSION = 3.4.1
 GOHOST := GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) go
 MANIFESTS_DIR=../../deploy/examples
 
@@ -38,25 +36,6 @@ else
 S5CMD_ARCH = Linux-arm64
 endif
 
-ifeq ($(REAL_HOST_PLATFORM),linux_amd64)
-OPERATOR_SDK_PLATFORM = x86_64-linux-gnu
-INCLUDE_CSV_TEMPLATES = true
-endif
-ifeq ($(REAL_HOST_PLATFORM),linux_arm64)
-OPERATOR_SDK_PLATFORM = aarch64-linux-gnu
-INCLUDE_CSV_TEMPLATES = true
-S5CMD_ARCH = Linux-arm64
-endif
-ifeq ($(REAL_HOST_PLATFORM),darwin_amd64)
-OPERATOR_SDK_PLATFORM = x86_64-apple-darwin
-INCLUDE_CSV_TEMPLATES = true
-endif
-ifneq ($(INCLUDE_CSV_TEMPLATES),true)
-$(info )
-$(info NOT INCLUDING OLM/CSV TEMPLATES!)
-$(info )
-endif
-
 # s5cmd's version
 S5CMD_VERSION = 2.3.0
 
@@ -64,8 +43,7 @@ S5CMD_VERSION = 2.3.0
 # ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
 # (see: https://sdk.operatorframework.io/docs/installation/)
 OPERATOR_SDK := $(TOOLS_HOST_DIR)/operator-sdk-$(OPERATOR_SDK_VERSION)
-YQv3 := $(TOOLS_HOST_DIR)/yq-$(YQv3_VERSION)
-export OPERATOR_SDK YQv3
+export OPERATOR_SDK
 
 # ====================================================================================
 # Build Rook
@@ -94,13 +72,7 @@ do.build:
 
 # call this before building multiple arches in parallel to prevent parallel build processes from
 # conflicting
-prerequisites: $(OPERATOR_SDK) $(YQv3)
-
-$(YQv3):
-	@echo === installing yq $(YQv3_VERSION) $(REAL_HOST_PLATFORM)
-	@mkdir -p $(TOOLS_HOST_DIR)
-	@curl -JL https://github.com/mikefarah/yq/releases/download/$(YQv3_VERSION)/yq_$(REAL_HOST_PLATFORM) -o $(YQv3)
-	@chmod +x $(YQv3)
+prerequisites: $(OPERATOR_SDK) $(YQ)
 
 $(OPERATOR_SDK):
 	@echo === installing operator-sdk $(REAL_HOST_PLATFORM)
@@ -110,7 +82,7 @@ $(OPERATOR_SDK):
 	@chmod +x $(OPERATOR_SDK)
 	@$(OPERATOR_SDK) version
 
-csv: $(OPERATOR_SDK) $(YQv3)
+csv: $(OPERATOR_SDK) $(YQ)
 	@echo generate csv with latest operator-sdk
 	@mkdir -p ../../build/csv/ceph
 	@../../build/csv/csv-gen.sh
