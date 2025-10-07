@@ -71,6 +71,12 @@ jobs:
       - name: validate gen-rbac
         run: tests/scripts/validate_modified_files.sh gen-rbac
 
+      - name: run gen-csv
+        run: make csv-clean && GOPATH=$(go env GOPATH) make gen-csv
+
+      - name: validate gen-csv
+        run: tests/scripts/validate_modified_files.sh gen-csv
+
   linux-build-all:
     runs-on: ubuntu-22.04
     if: "!contains(github.event.pull_request.labels.*.name, 'skip-ci')"

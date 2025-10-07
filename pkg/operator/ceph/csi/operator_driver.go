@@ -83,6 +83,8 @@ func (r *ReconcileCSI) createOrUpdateRBDDriverResource(cluster cephv1.CephCluste
 		return err
 	}
 
+	spec.NodePlugin.Labels = CSIParam.CSIRBDPodLabels
+	spec.ControllerPlugin.Labels = CSIParam.CSIRBDPodLabels
 	rbdDriver := &csiopv1.Driver{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,9 +95,6 @@ func (r *ReconcileCSI) createOrUpdateRBDDriverResource(cluster cephv1.CephCluste
 	}
 
 	rbdDriver.Spec.ControllerPlugin.Resources = createDriverControllerPluginResources(rbdPluginResource)
-	rbdDriver.Spec.Liveness = &csiopv1.LivenessSpec{
-		MetricsPort: int(CSIParam.RBDLivenessMetricsPort),
-	}
 	rbdDriver.Spec.NodePlugin.Resources = createDriverNodePluginResouces(rbdProvisionerResource)
 	rbdDriver.Spec.NodePlugin.UpdateStrategy = &v1.DaemonSetUpdateStrategy{
 		Type: v1.RollingUpdateDaemonSetStrategyType,
@@ -114,6 +113,9 @@ func (r *ReconcileCSI) createOrUpdateRBDDriverResource(cluster cephv1.CephCluste
 		}
 	}
 
+	podVolumes := getPodVolumes(rbdPluginVolume, rbdPluginVolumeMount)
+	rbdDriver.Spec.NodePlugin.PodCommonSpec.Volumes = podVolumes
+
 	err = r.createOrUpdateDriverResource(clusterInfo, rbdDriver)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create or update RBD driver resource %q", rbdDriver.Name)
@@ -129,6 +131,9 @@ func (r *ReconcileCSI) createOrUpdateCephFSDriverResource(cluster cephv1.CephClu
 		return err
 	}
 
+	spec.NodePlugin.Labels = CSIParam.CSICephFSPodLabels
+	spec.ControllerPlugin.Labels = CSIParam.CSICephFSPodLabels
+
 	cephFsDriver := &csiopv1.Driver{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -143,9 +148,6 @@ func (r *ReconcileCSI) createOrUpdateCephFSDriverResource(cluster cephv1.CephClu
 	}
 
 	cephFsDriver.Spec.ControllerPlugin.Resources = createDriverControllerPluginResources(cephFSPluginResource)
-	cephFsDriver.Spec.Liveness = &csiopv1.LivenessSpec{
-		MetricsPort: int(CSIParam.CephFSLivenessMetricsPort),
-	}
 
 	cephFsDriver.Spec.NodePlugin.Resources = createDriverNodePluginResouces(cephFSProvisionerResource)
 	cephFsDriver.Spec.NodePlugin.UpdateStrategy = &v1.DaemonSetUpdateStrategy{
@@ -165,6 +167,9 @@ func (r *ReconcileCSI) createOrUpdateCephFSDriverResource(cluster cephv1.CephClu
 		}
 	}
 
+	podVolumes := getPodVolumes(cephFSPluginVolume, cephFSPluginVolumeMount)
+	cephFsDriver.Spec.NodePlugin.PodCommonSpec.Volumes = podVolumes
+
 	err = r.createOrUpdateDriverResource(clusterInfo, cephFsDriver)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create or update cephFS driver resource %q", cephFsDriver.Name)
@@ -179,6 +184,8 @@ func (r *ReconcileCSI) createOrUpdateNFSDriverResource(cluster cephv1.CephCluste
 	if err != nil {
 		return err
 	}
+	spec.NodePlugin.Labels = CSIParam.CSINFSPodLabels
+	spec.ControllerPlugin.Labels = CSIParam.CSINFSPodLabels
 
 	NFSDriver := &csiopv1.Driver{
 		TypeMeta: metav1.TypeMeta{},
@@ -318,6 +325,56 @@ func (r *ReconcileCSI) applyMultusToObjectMeta(clusterNamespace string, netSpec 
 	return k8sutil.ApplyMultus(clusterNamespace, netSpec, objectMeta)
 }
 
+func getPodVolumes(volumeEnvVar, volumeMountEnvVar string) []csiopv1.VolumeSpec {
+	volumes := extractVolumes(volumeEnvVar)
+	volumeMounts := extractVolumeMounts(volumeMountEnvVar)
+	return append(volumes, volumeMounts...)
+}
+
+func extractVolumes(volumeEnvVar string) []csiopv1.VolumeSpec {
+	volumesRaw := k8sutil.GetOperatorSetting(volumeEnvVar, "")
+	if volumesRaw == "" {
+		return nil
+	}
+	volumes, err := k8sutil.YamlToVolumes(volumesRaw)
+	if err != nil {
+		logger.Errorf("failed to parse %q for %q. %v", volumesRaw, volumeEnvVar, err)
+		return nil
+	}
+	// Convert the volumes to csiopv1.VolumeSpec, where the mounts are empty.
+	// The CSI volume does not enforce the volume and mount to be defined together,
+	// so we can just have volumes defined here without mounts.
+	csiVolumes := []csiopv1.VolumeSpec{}
+	for i := range volumes {
+		csiVolumes = append(csiVolumes, csiopv1.VolumeSpec{
+			Volume: volumes[i],
+		})
+	}
+	return csiVolumes
+}
+
+func extractVolumeMounts(volumeMountsEnvVar string) []csiopv1.VolumeSpec {
+	volumeMountsRaw := k8sutil.GetOperatorSetting(volumeMountsEnvVar, "")
+	if volumeMountsRaw == "" {
+		return nil
+	}
+	volumeMounts, err := k8sutil.YamlToVolumeMounts(volumeMountsRaw)
+	if err != nil {
+		logger.Errorf("failed to parse %q for %q. %v", volumeMountsRaw, configName, err)
+		return nil
+	}
+	// Convert the volume mounts to csiopv1.VolumeSpec, where the volumes are empty.
+	// The CSI volume does not enforce the volume and mount to be defined together,
+	// so we can just have mounts defined here without volumes.
+	csiVolumes := []csiopv1.VolumeSpec{}
+	for i := range volumeMounts {
+		csiVolumes = append(csiVolumes, csiopv1.VolumeSpec{
+			Mount: volumeMounts[i],
+		})
+	}
+	return csiVolumes
+}
+
 func createDriverControllerPluginResources(key string) csiopv1.ControllerPluginResourcesSpec {
 	controllerPluginResources := csiopv1.ControllerPluginResourcesSpec{}
 	resource := getComputeResource(key)
@@ -355,11 +412,6 @@ func createDriverControllerPluginResources(key string) csiopv1.ControllerPluginR
 					Limits:   r.Resource.Limits,
 					Requests: r.Resource.Requests,
 				}
-			case strings.Contains(r.Name, "liveness"):
-				controllerPluginResources.Liveness = &corev1.ResourceRequirements{
-					Limits:   r.Resource.Limits,
-					Requests: r.Resource.Requests,
-				}
 			case strings.Contains(r.Name, "addons"):
 				controllerPluginResources.Addons = &corev1.ResourceRequirements{
 					Limits:   r.Resource.Limits,
@@ -384,11 +436,6 @@ func createDriverNodePluginResouces(key string) csiopv1.NodePluginResourcesSpec 
 				}
 			} else if strings.Contains(r.Name, "plugin") {
 				nodePluginResources.Plugin = &corev1.ResourceRequirements{
-					Limits:   r.Resource.Limits,
-					Requests: r.Resource.Requests,
-				}
-			} else if strings.Contains(r.Name, "liveness") {
-				nodePluginResources.Liveness = &corev1.ResourceRequirements{
 					Limits:   r.Resource.Limits,
 					Requests: r.Resource.Requests,
 				}
