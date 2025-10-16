@@ -1192,7 +1192,9 @@ func (c *Cluster) saveMonConfig() error {
 		return errors.Wrap(err, "failed to update csi cluster config")
 	}
 
-	if csi.EnableCSIOperator() && len(c.ClusterInfo.AllMonitors()) > 0 {
+	// for downstream we do not need to set the csi operator enable as the client operator will own it
+	// if the external mode is enable we should not check the enableCsiOperator
+	if (c.spec.External.Enable && len(c.ClusterInfo.AllMonitors()) > 0) || (csi.EnableCSIOperator() && len(c.ClusterInfo.AllMonitors()) > 0) {
 		err := csi.CreateUpdateCephConnection(c.context.Client, c.ClusterInfo, c.spec)
 		if err != nil {
 			return errors.Wrap(err, "failed to create/update cephConnection")
