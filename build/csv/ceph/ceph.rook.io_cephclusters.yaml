@@ -1896,6 +1896,10 @@ spec:
                     type: array
                   onlyApplyOSDPlacement:
                     type: boolean
+                  osdMaxUpdatesInParallel:
+                    format: int32
+                    minimum: 1
+                    type: integer
                   scheduleAlways:
                     type: boolean
                   storageClassDeviceSets:
