@@ -461,6 +461,8 @@ spec:
                     maximum: 5
                     minimum: 0
                     type: integer
+                  hostNetwork:
+                    type: boolean
                   modules:
                     items:
                       properties:
