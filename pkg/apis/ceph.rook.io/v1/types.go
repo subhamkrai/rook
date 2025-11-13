@@ -854,6 +854,9 @@ type MgrSpec struct {
 	// +optional
 	// +nullable
 	Modules []Module `json:"modules,omitempty"`
+	// Whether host networking is enabled for the Ceph Mgr. If not set, the network settings from CephCluster.spec.networking will be applied.
+	// +optional
+	HostNetwork *bool `json:"hostNetwork,omitempty"`
 }
 
 // Module represents mgr modules that the user wants to enable or disable
@@ -3488,6 +3491,10 @@ type StorageScopeSpec struct {
 	// The default is false since data rebalancing can cause temporary cluster slowdown.
 	// +optional
 	AllowOsdCrushWeightUpdate bool `json:"allowOsdCrushWeightUpdate,omitempty"`
+	// The maximum number of OSDs to update in parallel.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	OSDMaxUpdatesInParallel uint32 `json:"osdMaxUpdatesInParallel,omitempty"`
 }
 
 // Migration handles the OSD migration

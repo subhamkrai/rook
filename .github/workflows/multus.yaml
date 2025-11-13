@@ -46,12 +46,12 @@ jobs:
           go-version: "1.24"
 
       - name: Create KinD Cluster
-        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
         with:
           config: tests/scripts/multus/kind-config.yaml
           cluster_name: kind
 
-      - name: consider debugging
+      - name: consider (pre-job) debugging
         uses: ./.github/workflows/tmate_debug
         with:
           use-tmate: ${{ secrets.USE_TMATE }}
@@ -111,3 +111,8 @@ jobs:
         # independent from other tests as long as nodes are tainted and labeled
         if: steps.taint.outcome == 'success' && !cancelled()
         run: ./tests/scripts/multus/test-240-stretch-cluster-only.sh
+
+      - name: consider (post-job) debugging
+        uses: ./.github/workflows/upterm_debug
+        with:
+          debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}

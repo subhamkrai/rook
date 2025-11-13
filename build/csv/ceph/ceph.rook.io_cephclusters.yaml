@@ -461,6 +461,8 @@ spec:
                     maximum: 5
                     minimum: 0
                     type: integer
+                  hostNetwork:
+                    type: boolean
                   modules:
                     items:
                       properties:
@@ -1896,6 +1898,10 @@ spec:
                     type: array
                   onlyApplyOSDPlacement:
                     type: boolean
+                  osdMaxUpdatesInParallel:
+                    format: int32
+                    minimum: 1
+                    type: integer
                   scheduleAlways:
                     type: boolean
                   storageClassDeviceSets:
