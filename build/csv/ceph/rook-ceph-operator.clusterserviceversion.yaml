@@ -1402,10 +1402,6 @@ spec:
                         value: INFO
                       - name: ROOK_CEPH_STATUS_CHECK_INTERVAL
                         value: 60s
-                      - name: ROOK_MON_HEALTHCHECK_INTERVAL
-                        value: 45s
-                      - name: ROOK_MON_OUT_TIMEOUT
-                        value: 600s
                       - name: ROOK_DISCOVER_DEVICES_INTERVAL
                         value: 60m
                       - name: ROOK_HOSTPATH_REQUIRES_PRIVILEGED
