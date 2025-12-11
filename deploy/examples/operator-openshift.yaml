@@ -716,6 +716,8 @@ spec:
               value: openshift-storage
             - name: ROOK_CSI_DISABLE_DRIVER
               value: "true"
+            - name: ROOK_USE_CSI_OPERATOR
+              value: "false"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
