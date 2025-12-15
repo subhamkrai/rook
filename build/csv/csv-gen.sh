@@ -7,9 +7,11 @@ source "../../build/common.sh"
 # VARIABLES #
 #############
 
-operator_sdk="${OPERATOR_SDK:-operator-sdk}"
 yq="${YQ:-yq}"
 PLATFORM=$(go env GOARCH)
+OS=$(go env GOOS)
+# Not updating to latest version as new field `createdAt` is being added to newer versions of operator-sdk.
+OPERATOR_SDK_VERSION="v1.25.0"
 
 CSV_FILE_NAME="../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-operator.clusterserviceversion.yaml"
 EXTERNAL_CLUSTER_SCRIPT_CONFIGMAP="../../build/csv/ceph/$PLATFORM/manifests/rook-ceph-external-cluster-script-config_v1_configmap.yaml"
@@ -37,8 +39,37 @@ ROOK_CSIADDONS_IMAGE=${ROOK_CSIADDONS_IMAGE:-${LATEST_ROOK_CSIADDONS_IMAGE}}
 # FUNCTIONS #
 #############
 
+function install_operator_sdk() {
+
+    local platform="${OS}_${PLATFORM}"
+    local tools_dir="${CACHE_DIR:-${WORK_DIR:-/tmp}}/tools"
+    local operator_sdk_path="${tools_dir}/operator-sdk-${OPERATOR_SDK_VERSION}"
+
+    # Check if operator-sdk with required version is already in PATH
+    existing_sdk=$(command -v operator-sdk 2>/dev/null || true)
+    if [ -n "$existing_sdk" ]; then
+        if "$existing_sdk" version 2>/dev/null | grep -q "${OPERATOR_SDK_VERSION#v}"; then
+            export OPERATOR_SDK="$existing_sdk"
+            return
+        fi
+    fi
+
+    # Install operator-sdk if not present
+    if [ ! -f "$operator_sdk_path" ]; then
+        echo "=== installing operator-sdk ${OPERATOR_SDK_VERSION}"
+        mkdir -p "$tools_dir"
+        curl -JL -o "$operator_sdk_path" \
+            "https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_${platform}"
+        chmod +x "$operator_sdk_path"
+    fi
+
+    export OPERATOR_SDK="$operator_sdk_path"
+}
+
 function generate_csv() {
-    kubectl kustomize ../../deploy/examples/ | "$operator_sdk" generate bundle --package="rook-ceph-operator" --output-dir="../../build/csv/ceph/$PLATFORM" --extra-service-accounts=rook-ceph-default,rook-csi-rbd-provisioner-sa,rook-csi-rbd-plugin-sa,rook-csi-cephfs-provisioner-sa,rook-csi-nfs-provisioner-sa,rook-csi-nfs-plugin-sa,rook-csi-cephfs-plugin-sa,rook-ceph-system,rook-ceph-rgw,rook-ceph-purge-osd,rook-ceph-osd,rook-ceph-mgr,rook-ceph-cmd-reporter
+    install_operator_sdk
+
+    kubectl kustomize ../../deploy/examples/ | "$OPERATOR_SDK" generate bundle --package="rook-ceph-operator" --output-dir="../../build/csv/ceph/$PLATFORM" --extra-service-accounts=rook-ceph-default,rook-csi-rbd-provisioner-sa,rook-csi-rbd-plugin-sa,rook-csi-cephfs-provisioner-sa,rook-csi-nfs-provisioner-sa,rook-csi-nfs-plugin-sa,rook-csi-cephfs-plugin-sa,rook-ceph-system,rook-ceph-rgw,rook-ceph-purge-osd,rook-ceph-osd,rook-ceph-mgr,rook-ceph-cmd-reporter
 
     # cleanup to get the expected state before merging the real data from assembles
     $yq 'del(.spec.icon[])' --inplace "$CSV_FILE_NAME"
