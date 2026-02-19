@@ -56,20 +56,16 @@ FLAVORS ?= output images docs helm charts
 DOCKER_REGISTRY ?= docker.io/subham03
 QUAY_REGISTRY ?= quay.io/skrai
 GHCR_REGISTRY ?= ghcr.io/subhamkrai
-ifeq ($(TAGGED_RELEASE),false)
-# Publish always to dockerhub, including master and interim builds
-REGISTRIES = $(DOCKER_REGISTRY)
-else
-# Publish the images to all registries for tagged releases
+# Publish to all configured registries (docker, quay, ghcr) for every build.
+# Previously only Docker was used for non-tagged builds; now all registries get the images.
 REGISTRIES = $(DOCKER_REGISTRY) $(QUAY_REGISTRY) $(GHCR_REGISTRY)
-endif
 IMAGE_ARCHS := $(subst linux_,,$(filter linux_%,$(PLATFORMS)))
 IMAGE_PLATFORMS := $(subst _,/,$(subst $(SPACE),$(COMMA),$(filter linux_%,$(PLATFORMS))))
 IMAGE_PLATFORMS_COMMA := $(shell echo "$(IMAGE_PLATFORMS)" | sed 's/ /,/g' | sed 's/.$$//')
 
-S3_BUCKET ?= rook.releases
-S3_SYNC := aws s3 sync --only-show-errors
-S3_SYNC_DEL := aws s3 sync --only-show-errors --delete
+# S3_BUCKET ?= rook.releases
+# S3_SYNC := aws s3 sync --only-show-errors
+# S3_SYNC_DEL := aws s3 sync --only-show-errors --delete
 
 # ====================================================================================
 # Targets
@@ -91,13 +87,13 @@ build.docs: deps.docs
 	# Build the docs once before they are published to ensure they are correctly building
 	cd $(ROOT_DIR) && mkdocs build --strict
 
-publish.docs:
-	if ! git remote show docs > /dev/null 2>&1; then git remote add docs $(DOCS_GIT_REPO); fi
-	# If we are running in GitHub actions, remove the extraheader so our custom GitHub API token is used
-	if test "$$GITHUB_ACTIONS" = "true"; then git config --unset 'http.https://github.com/.extraheader'; fi
-	git fetch -u docs gh-pages
-	# Switch to root of repo and then run the build and deploy of the documentation
-	cd $(ROOT_DIR) && mike deploy --remote docs --push --branch gh-pages --update-aliases --deploy-prefix $(DOCS_PREFIX) $(DOCS_VERSION) $(DOCS_VERSION_ALIAS)
+# publish.docs:
+# 	if ! git remote show docs > /dev/null 2>&1; then git remote add docs $(DOCS_GIT_REPO); fi
+# 	# If we are running in GitHub actions, remove the extraheader so our custom GitHub API token is used
+# 	if test "$$GITHUB_ACTIONS" = "true"; then git config --unset 'http.https://github.com/.extraheader'; fi
+# 	git fetch -u docs gh-pages
+# 	# Switch to root of repo and then run the build and deploy of the documentation
+# 	cd $(ROOT_DIR) && mike deploy --remote docs --push --branch gh-pages --update-aliases --deploy-prefix $(DOCS_PREFIX) $(DOCS_VERSION) $(DOCS_VERSION_ALIAS)
 
 # ====================================================================================
 # helm
@@ -105,18 +101,18 @@ HELM_CHANNEL = release
 HELM_TEMP := $(shell mktemp -d)
 HELM_URL := $(HELM_BASE_URL)/$(HELM_CHANNEL)
 
-promote.helm: $(HELM)
-#	copy existing charts to a temp dir, then combine with new charts, reindex, and upload
-	$(S3_SYNC) s3://$(HELM_S3_BUCKET)/$(HELM_CHANNEL) $(HELM_TEMP)
-	# delete unnecessary files:
-	rm -fr $(HELM_TEMP)/*tgz
-	# rename current index to distinguish the previous file.
-	mv $(HELM_TEMP)/index.yaml $(HELM_TEMP)/previous_index.yaml
-	$(S3_SYNC) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)/charts $(HELM_TEMP)
-	$(HELM) repo index --url $(HELM_URL) --merge $(HELM_TEMP)/previous_index.yaml $(HELM_TEMP)
-	rm -f $(HELM_TEMP)/previous_index.yaml
-	$(S3_SYNC) $(HELM_TEMP) s3://$(HELM_S3_BUCKET)/$(HELM_CHANNEL)
-	rm -fr $(HELM_TEMP)
+# promote.helm: $(HELM)
+# #	copy existing charts to a temp dir, then combine with new charts, reindex, and upload
+# 	$(S3_SYNC) s3://$(HELM_S3_BUCKET)/$(HELM_CHANNEL) $(HELM_TEMP)
+# 	# delete unnecessary files:
+# 	rm -fr $(HELM_TEMP)/*tgz
+# 	# rename current index to distinguish the previous file.
+# 	mv $(HELM_TEMP)/index.yaml $(HELM_TEMP)/previous_index.yaml
+# 	$(S3_SYNC) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)/charts $(HELM_TEMP)
+# 	$(HELM) repo index --url $(HELM_URL) --merge $(HELM_TEMP)/previous_index.yaml $(HELM_TEMP)
+# 	rm -f $(HELM_TEMP)/previous_index.yaml
+# 	$(S3_SYNC) $(HELM_TEMP) s3://$(HELM_S3_BUCKET)/$(HELM_CHANNEL)
+# 	rm -fr $(HELM_TEMP)
 
 # set the helm cart version number.
 # you should not need to do this for the majority of scenarios.
@@ -152,11 +148,11 @@ $(foreach r,$(REGISTRIES), $(foreach c,$(HELM_CHARTS),$(eval $(call chart.target
 # ====================================================================================
 # output
 
-publish.output:
-	$(S3_SYNC_DEL) $(OUTPUT_DIR) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)
-promote.output:
-	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(HELM_CHANNEL)/$(VERSION)
-	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(HELM_CHANNEL)/current
+# publish.output:
+# 	$(S3_SYNC_DEL) $(OUTPUT_DIR) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION)
+# promote.output:
+# 	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(HELM_CHANNEL)/$(VERSION)
+# 	$(S3_SYNC_DEL) s3://$(S3_BUCKET)/build/$(BRANCH_NAME)/$(VERSION) s3://$(S3_BUCKET)/$(HELM_CHANNEL)/current
 
 # ====================================================================================
 # images
