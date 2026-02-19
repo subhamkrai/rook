@@ -53,9 +53,9 @@ PLATFORMS ?= $(ALL_PLATFORMS)
 # "charts" flavor is for pushing to oci endpoint
 FLAVORS ?= output images docs helm charts
 
-DOCKER_REGISTRY ?= docker.io/rook
-QUAY_REGISTRY ?= quay.io/rook
-GHCR_REGISTRY ?= ghcr.io/rook
+DOCKER_REGISTRY ?= docker.io/subham03
+QUAY_REGISTRY ?= quay.io/skrai
+GHCR_REGISTRY ?= ghcr.io/subhamkrai
 ifeq ($(TAGGED_RELEASE),false)
 # Publish always to dockerhub, including master and interim builds
 REGISTRIES = $(DOCKER_REGISTRY)
