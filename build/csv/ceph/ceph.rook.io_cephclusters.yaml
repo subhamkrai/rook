@@ -1636,6 +1636,9 @@ spec:
                             minLength: 3
                             type: string
                         type: object
+                        x-kubernetes-validations:
+                        - message: keyGeneration cannot be removed once set
+                          rule: '!has(oldSelf.keyGeneration) || has(self.keyGeneration)'
                       daemon:
                         properties:
                           keyGeneration:
@@ -1660,6 +1663,9 @@ spec:
                             minLength: 3
                             type: string
                         type: object
+                        x-kubernetes-validations:
+                        - message: keyGeneration cannot be removed once set
+                          rule: '!has(oldSelf.keyGeneration) || has(self.keyGeneration)'
                       rbdMirrorPeer:
                         properties:
                           keyGeneration:
@@ -1684,6 +1690,9 @@ spec:
                             minLength: 3
                             type: string
                         type: object
+                        x-kubernetes-validations:
+                        - message: keyGeneration cannot be removed once set
+                          rule: '!has(oldSelf.keyGeneration) || has(self.keyGeneration)'
                     type: object
                   keyRotation:
                     nullable: true
