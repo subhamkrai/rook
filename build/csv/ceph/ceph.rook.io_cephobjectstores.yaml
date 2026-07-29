@@ -107,6 +107,14 @@ spec:
                       codingChunks:
                         minimum: 0
                         type: integer
+                      crushNumFailureDomains:
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      crushOSDsPerFailureDomain:
+                        format: int32
+                        minimum: 1
+                        type: integer
                       dataChunks:
                         minimum: 0
                         type: integer
@@ -126,6 +134,10 @@ spec:
                     - codingChunks
                     - dataChunks
                     type: object
+                    x-kubernetes-validations:
+                    - message: crushNumFailureDomains and crushOSDsPerFailureDomain
+                        must be specified together
+                      rule: has(self.crushNumFailureDomains) == has(self.crushOSDsPerFailureDomain)
                   failureDomain:
                     type: string
                   mirroring:
@@ -1429,6 +1441,14 @@ spec:
                       codingChunks:
                         minimum: 0
                         type: integer
+                      crushNumFailureDomains:
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      crushOSDsPerFailureDomain:
+                        format: int32
+                        minimum: 1
+                        type: integer
                       dataChunks:
                         minimum: 0
                         type: integer
@@ -1448,6 +1468,10 @@ spec:
                     - codingChunks
                     - dataChunks
                     type: object
+                    x-kubernetes-validations:
+                    - message: crushNumFailureDomains and crushOSDsPerFailureDomain
+                        must be specified together
+                      rule: has(self.crushNumFailureDomains) == has(self.crushOSDsPerFailureDomain)
                   failureDomain:
                     type: string
                   mirroring:
