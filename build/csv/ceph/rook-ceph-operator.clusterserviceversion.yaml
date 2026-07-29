@@ -740,7 +740,7 @@ spec:
                         cpu: "1"
                         memory: 512Mi
                       requests:
-                        cpu: 100m
+                        cpu: 10m
                         memory: 128Mi
                     securityContext:
                       runAsGroup: 2016

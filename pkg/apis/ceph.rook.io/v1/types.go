@@ -1111,7 +1111,7 @@ type PoolSpec struct {
 // allowed pool names that can be specified.
 type NamedBlockPoolSpec struct {
 	// The desired name of the pool if different from the CephBlockPool CR name.
-	// +kubebuilder:validation:Enum=.rgw.root;.nfs;.mgr
+	// +kubebuilder:validation:Enum=.rgw.root;.nfs;.mgr;.nvmeof
 	// +optional
 	Name string `json:"name,omitempty"`
 	// The core pool configuration
@@ -3594,7 +3594,7 @@ type RBDMirroringSpec struct {
 	// +optional
 	Peers MirroringPeerSpec `json:"peers,omitempty"`
 
-	// The affinity to place the rgw pods (default is to place on any available node)
+	// The affinity to place the rbd mirror pods (default is to place on any available node)
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +nullable
 	// +optional
@@ -3664,7 +3664,7 @@ type CephFilesystemMirrorList struct {
 
 // FilesystemMirroringSpec is the filesystem mirroring specification
 type FilesystemMirroringSpec struct {
-	// The affinity to place the rgw pods (default is to place on any available node)
+	// The affinity to place the cephfs-mirror pods (default is to place on any available node)
 	// +nullable
 	// +optional
 	Placement Placement `json:"placement,omitempty"`
@@ -4247,10 +4247,6 @@ type NVMeOFGatewaySpec struct {
 	// The number of active gateway instances
 	// +kubebuilder:validation:Minimum=1
 	Instances int `json:"instances"`
-
-	// Pool is the RADOS pool where NVMe-oF configuration is stored
-	// +kubebuilder:validation:MinLength=1
-	Pool string `json:"pool"`
 
 	// Group is the gateway group name for high availability (ANA group)
 	// +kubebuilder:validation:MinLength=1

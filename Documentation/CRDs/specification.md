@@ -1362,7 +1362,7 @@ Placement
 </td>
 <td>
 <em>(Optional)</em>
-<p>The affinity to place the rgw pods (default is to place on any available node)</p>
+<p>The affinity to place the cephfs-mirror pods (default is to place on any available node)</p>
 </td>
 </tr>
 <tr>
@@ -2605,7 +2605,7 @@ Placement
 </td>
 <td>
 <em>(Optional)</em>
-<p>The affinity to place the rgw pods (default is to place on any available node)</p>
+<p>The affinity to place the rbd mirror pods (default is to place on any available node)</p>
 </td>
 </tr>
 <tr>
@@ -4567,17 +4567,6 @@ int
 </td>
 <td>
 <p>The number of active gateway instances</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>pool</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Pool is the RADOS pool where NVMe-oF configuration is stored</p>
 </td>
 </tr>
 <tr>
@@ -7547,7 +7536,7 @@ Placement
 </td>
 <td>
 <em>(Optional)</em>
-<p>The affinity to place the rgw pods (default is to place on any available node)</p>
+<p>The affinity to place the cephfs-mirror pods (default is to place on any available node)</p>
 </td>
 </tr>
 <tr>
@@ -10869,17 +10858,6 @@ int
 </tr>
 <tr>
 <td>
-<code>pool</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Pool is the RADOS pool where NVMe-oF configuration is stored</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>group</code><br/>
 <em>
 string
@@ -14159,7 +14137,7 @@ Placement
 </td>
 <td>
 <em>(Optional)</em>
-<p>The affinity to place the rgw pods (default is to place on any available node)</p>
+<p>The affinity to place the rbd mirror pods (default is to place on any available node)</p>
 </td>
 </tr>
 <tr>

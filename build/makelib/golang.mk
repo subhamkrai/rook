@@ -182,17 +182,19 @@ go.validate: go.vet go.fmt
 go.mod.update:
 	@echo === updating modules
 	@$(GOHOST) get -u ./...
+	@echo === updating APIs modules
+	@(cd pkg/apis/; $(GOHOST) get -u ./...)
+	@echo === syncing workspace modules
+	@$(GOHOST) work sync
 
 .PHONY: go.mod.check
 go.mod.check:
-	@echo === syncing root modules with APIs modules
-	@cp -a go.sum pkg/apis/go.sum
-	@cat go.mod | sed -e 's|^module github.com/rook/rook|module github.com/rook/rook/pkg/apis|' \
-	                  -e '\:[[:space:]]*github.com/rook/rook/pkg/apis => ./pkg/apis:d' > pkg/apis/go.mod
 	@echo === ensuring APIs modules are tidied
 	@(cd pkg/apis/; $(GOHOST) mod tidy -compat=$(GO_VERSION))
 	@echo === ensuring root modules are tidied
 	@$(GOHOST) mod tidy -compat=$(GO_VERSION)
+	@echo === syncing workspace modules
+	@$(GOHOST) work sync
 
 .PHONY: go.mod.clean
 go.mod.clean:
@@ -236,7 +238,8 @@ $(CONTROLLER_GEN): | $(TOOLS_HOST_DIR)
 	}
 
 
-export CODE_GENERATOR_VERSION=0.34.2
-export CODE_GENERATOR=$(TOOLS_HOST_DIR)/code-generator-$(CODE_GENERATOR_VERSION)
+# fetch the code generator tag from the kubernetes version used in the repo
+export KUBE_CODEGEN_TAG := $(shell cd $(ROOT_DIR) && $(GO) list -m -f '{{.Version}}' k8s.io/apimachinery)
+export CODE_GENERATOR=$(TOOLS_HOST_DIR)/code-generator-$(patsubst v%,%,$(KUBE_CODEGEN_TAG))
 $(CODE_GENERATOR): | $(TOOLS_HOST_DIR)
-	curl -sL https://github.com/kubernetes/code-generator/archive/refs/tags/v${CODE_GENERATOR_VERSION}.tar.gz | tar -xz -C $(TOOLS_HOST_DIR)
+	curl -sL https://github.com/kubernetes/code-generator/archive/refs/tags/$(KUBE_CODEGEN_TAG).tar.gz | tar -xz -C $(TOOLS_HOST_DIR)
