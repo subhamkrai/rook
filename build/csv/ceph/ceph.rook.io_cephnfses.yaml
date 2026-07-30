@@ -1811,6 +1811,11 @@ spec:
                         type: array
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  port:
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
                   priorityClassName:
                     type: string
                   resources:
