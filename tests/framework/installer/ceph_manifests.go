@@ -452,7 +452,7 @@ spec:
     activeStandby: true`
 }
 
-// GetFilesystem returns the manifest to create a Rook Ceph NFS resource with the given config.
+// GetNFS returns the manifest to create a Rook Ceph NFS resource with the given config.
 func (m *CephManifestsMaster) GetNFS(name string, count int) string {
 	return `apiVersion: ceph.rook.io/v1
 kind: CephNFS
@@ -467,7 +467,7 @@ spec:
     active: ` + strconv.Itoa(count)
 }
 
-// GetFilesystem returns the manifest to create a Rook Ceph NFS resource with the given config.
+// GetNFSPool returns the manifest to create the CephBlockPool backing the .nfs pool.
 func (m *CephManifestsMaster) GetNFSPool() string {
 	return `apiVersion: ceph.rook.io/v1
 kind: CephBlockPool

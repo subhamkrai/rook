@@ -120,7 +120,7 @@ $ ceph osd down osd.<ID>
 ```bash
 kubectl rook-ceph rook purge-osd 0 --force
 
-# 2022-09-14 08:58:28.888431 I | rookcmd: starting Rook v1.10.0-alpha.0.164.gcb73f728c with arguments 'rook ceph osd remove --osd-ids=0 --force-osd-removal=true'
+# 2022-09-14 08:58:28.888431 I | rookcmd: starting Rook v1.10.0-alpha.0.164.gcb73f728c with arguments: rook ceph osd remove --osd-ids=0 --force-osd-removal=true
 # 2022-09-14 08:58:28.889217 I | rookcmd: flag values: --force-osd-removal=true, --help=false, --log-level=INFO, --operator-image=, --osd-ids=0, --preserve-pvc=false, --service-account=
 # 2022-09-14 08:58:28.889582 I | op-mon: parsing mon endpoints: b=10.106.118.240:6789
 # 2022-09-14 08:58:28.898898 I | cephclient: writing config file /var/lib/rook/rook-ceph/rook-ceph.config
@@ -207,10 +207,17 @@ The replacement runs in five stages, alternating between what you do and what Ro
 - **Matched automatically:** `useAllDevices: true`, a `deviceFilter` that matches by kernel name, or a `/dev/disk/by-path/...` reference when the new disk is in the same physical slot.
 - **Needs a CR update:** a `/dev/disk/by-id/...` or `/dev/disk/by-uuid/...` reference, an explicit device name, or a `by-path` reference when the disk moves to a different slot. These identify the old disk, so edit the CephCluster CR to point at the new one.
 
-**Supported layouts:** all types of OSDs for host-based clusters, including shared-metadata OSDs.
+**Supported:**
 
-!!! warning
-    This procedure replaces a single **data** disk. It does not replace a **metadata device** shared by several OSDs. If the disk that failed is the shared metadata device, this procedure does not apply.
+- Host-based OSDs that own their whole data device.
+- OSDs sharing a metadata (DB) device: the data disk is replaced, the DB volume is reused.
+- Encrypted OSDs.
+
+**Not supported:**
+
+- **PVC-based OSDs** (`storageClassDeviceSets`). Rook rejects the request.
+- **Multiple OSDs on one device** (`osdsPerDevice` greater than `1`). Rook rejects the request and logs a warning. Use [Remove an OSD](#remove-an-osd) for such a disk instead, and let the operator re-create the OSDs.
+- **The shared metadata device itself.** This procedure replaces a single **data** disk; if the failed disk is the metadata device shared by several OSDs, it does not apply.
 
 ### Step 1: Trigger the replacement
 
@@ -274,6 +281,24 @@ kubectl -n rook-ceph get deployment rook-ceph-osd-5
 ```
 
 The replacement is complete once OSD `5` is `up` and `in`. Ceph then backfills the data onto the new disk; monitor recovery from the [Ceph dashboard](../Monitoring/ceph-dashboard.md) or the toolbox until all PGs are `active+clean`.
+
+### If the replacement disk fails to provision
+
+If the replacement disk is faulty, provisioning can fail after Ceph has already reserved the OSD ID. The original OSD cannot then be kept in place: once a working disk is in place it is provisioned as a **new** OSD — which may or may not reuse the old ID — and Ceph rebalances data as it does for any new OSD. No data is lost.
+
+Rook deletes the leftover `rook-ceph-osd-5` deployment. The other OSDs sharing the metadata device are unaffected.
+
+The operator log records the cleanup:
+
+```console
+kubectl -n rook-ceph logs deploy/rook-ceph-operator | grep -i "replacement"
+```
+
+Why the disk failed to provision is logged by the OSD prepare job on that node, not by the operator:
+
+```console
+kubectl -n rook-ceph logs job/rook-ceph-osd-prepare-<node>
+```
 
 ## OSD Migration
 
