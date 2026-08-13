@@ -81,7 +81,7 @@ func (s *MultiClusterDeploySuite) SetupSuite() {
 		Mons:               1,
 		MultipleMgrs:       true,
 		RookVersion:        installer.LocalBuildTag,
-		CephVersion:        installer.TentacleVersion,
+		CephVersion:        installer.TentacleDevelVersion,
 		RequireMsgr2:       true,
 		ClusterConcurrency: 2,
 	}
@@ -92,7 +92,7 @@ func (s *MultiClusterDeploySuite) SetupSuite() {
 		Namespace:         "multi-external",
 		OperatorNamespace: s.settings.OperatorNamespace,
 		RookVersion:       s.settings.RookVersion,
-		CephVersion:       installer.TentacleVersion,
+		CephVersion:       installer.TentacleDevelVersion,
 	}
 	externalSettings.ApplyEnvVars()
 	s.externalManifests = installer.NewCephManifests(externalSettings)

@@ -17,6 +17,10 @@ $CEPH_CMD -s >"${LOG_DIR}"/ceph-status.txt
 $CEPH_CMD osd dump >"${LOG_DIR}"/ceph-osd-dump.txt
 $CEPH_CMD report >"${LOG_DIR}"/ceph-report.txt
 $CEPH_CMD auth ls >"${LOG_DIR}"/ceph-auth-ls.txt
+$CEPH_CMD mgr dump >"${LOG_DIR}"/ceph-mgr-dump.txt
+$CEPH_CMD fs dump >"${LOG_DIR}"/ceph-mds-dump.txt
+$CEPH_CMD mgr dump -f json-pretty >"${LOG_DIR}"/ceph-mgr-dump-json-pretty.txt
+$CEPH_CMD fs dump -f json-pretty >"${LOG_DIR}"/ceph-mds-dump-json-pretty.txt
 
 NAMESPACES=("$CLUSTER_NAMESPACE")
 if [[ "$OPERATOR_NAMESPACE" != "$CLUSTER_NAMESPACE" ]]; then

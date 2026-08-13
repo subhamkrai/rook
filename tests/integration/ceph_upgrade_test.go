@@ -166,11 +166,10 @@ func (s *UpgradeSuite) testUpgrade(useHelm bool, initialCephVersion v1.CephVersi
 	}
 
 	//
-	// Upgrade from squid to tentacle
-	//
+	// Upgrade from squid to tentacle devel
 	logger.Infof("*** UPGRADING CEPH FROM SQUID TO TENTACLE ***")
 	s.gatherLogs(s.settings.OperatorNamespace, "_before_tentacle_upgrade")
-	s.upgradeCephVersion(installer.TentacleVersion.Image, numOSDs)
+	s.upgradeCephVersion(installer.TentacleDevelVersion, numOSDs)
 	// Verify reading and writing to the test clients
 	newFile = "post-tentacle-upgrade-file"
 	s.verifyFilesAfterUpgrade(newFile, rbdFilesToRead, cephfsFilesToRead)
@@ -204,7 +203,7 @@ func (s *UpgradeSuite) TestUpgradeCephToSquidDevel() {
 	//
 	logger.Infof("*** UPGRADING CEPH FROM SQUID STABLE TO SQUID DEVEL ***")
 	s.gatherLogs(s.settings.OperatorNamespace, "_before_squid_upgrade")
-	s.upgradeCephVersion(installer.SquidDevelVersion.Image, numOSDs)
+	s.upgradeCephVersion(installer.SquidDevelVersion, numOSDs)
 	// Verify reading and writing to the test clients
 	newFile := "post-squid-upgrade-file"
 	s.verifyFilesAfterUpgrade(newFile, rbdFilesToRead, cephfsFilesToRead)
@@ -238,7 +237,7 @@ func (s *UpgradeSuite) TestUpgradeCephToTentacleDevel() {
 	//
 	logger.Infof("*** UPGRADING CEPH FROM TENTACLE STABLE TO TENTACLE DEVEL ***")
 	s.gatherLogs(s.settings.OperatorNamespace, "_before_tentacle_upgrade")
-	s.upgradeCephVersion(installer.TentacleDevelVersion.Image, numOSDs)
+	s.upgradeCephVersion(installer.TentacleDevelVersion, numOSDs)
 	// Verify reading and writing to the test clients
 	newFile := "post-tentacle-upgrade-file"
 	s.verifyFilesAfterUpgrade(newFile, rbdFilesToRead, cephfsFilesToRead)
@@ -378,13 +377,13 @@ func (s *UpgradeSuite) gatherLogs(systemNamespace, testSuffix string) {
 	s.installer.GatherAllRookLogs(n, systemNamespace, s.namespace)
 }
 
-func (s *UpgradeSuite) upgradeCephVersion(newCephImage string, numOSDs int) {
+func (s *UpgradeSuite) upgradeCephVersion(newCephVersion v1.CephVersionSpec, numOSDs int) {
 	osdDepList, err := k8sutil.GetDeployments(context.TODO(), s.k8sh.Clientset, s.namespace, "app=rook-ceph-osd")
 	require.NoError(s.T(), err)
 	oldCephVersion := osdDepList.Items[0].Labels["ceph-version"] // upgraded OSDs should not have this version label
 
 	_, err = s.k8sh.Kubectl("-n", s.namespace, "patch", "CephCluster", s.namespace, "--type=merge",
-		"-p", fmt.Sprintf(`{"spec": {"cephVersion": {"image": "%s"}}}`, newCephImage))
+		"-p", fmt.Sprintf(`{"spec": {"cephVersion": {"image": "%s", "allowUnsupported": %t}}}`, newCephVersion.Image, newCephVersion.AllowUnsupported))
 
 	assert.NoError(s.T(), err)
 	s.waitForUpgradedDaemons(oldCephVersion, "ceph-version", numOSDs, false)

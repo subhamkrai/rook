@@ -119,6 +119,7 @@ func (h *CephInstaller) configureRookCephClusterViaHelm(upgrade bool) error {
 	values["toolbox"] = map[string]interface{}{
 		"enabled":   true,
 		"resources": nil,
+		"image":     h.settings.CephVersion.Image,
 	}
 	values["monitoring"] = map[string]interface{}{
 		"enabled":               true,
