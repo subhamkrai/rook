@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
@@ -30,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -66,12 +68,37 @@ func osdTreeJSON(osds map[int]string) string {
 	return fmt.Sprintf(`{"nodes":[%s],"stray":[]}`, nodes)
 }
 
+// osdMetadataJSON builds an `osd metadata` response from id -> "hostname|devices" pairs.
+func osdMetadataJSON(osds map[int]string) string {
+	entries := ""
+	for id, hostAndDevices := range osds {
+		host, devices, _ := strings.Cut(hostAndDevices, "|")
+		if entries != "" {
+			entries += ","
+		}
+		entries += fmt.Sprintf(`{"id":%d,"hostname":%q,"devices":%q}`, id, host, devices)
+	}
+	return fmt.Sprintf(`[%s]`, entries)
+}
+
 func newReplaceClusterWithTree(clientset *fake.Clientset, osds map[int]string) *Cluster {
+	// Default metadata: every OSD alone on its own device, so only the tree drives the outcome.
+	metadata := map[int]string{}
+	for id := range osds {
+		metadata[id] = fmt.Sprintf("node-1|disk%d", id)
+	}
+	return newReplaceClusterWithTreeAndMetadata(clientset, osds, metadata)
+}
+
+func newReplaceClusterWithTreeAndMetadata(clientset *fake.Clientset, osds, metadata map[int]string) *Cluster {
 	c := newTestReplaceCluster(clientset)
 	c.context.Executor = &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(command string, args ...string) (string, error) {
 			if len(args) >= 2 && args[0] == "osd" && args[1] == "tree" {
 				return osdTreeJSON(osds), nil
+			}
+			if len(args) >= 2 && args[0] == "osd" && args[1] == "metadata" {
+				return osdMetadataJSON(metadata), nil
 			}
 			return "", nil
 		},
@@ -95,7 +122,7 @@ func osdDeployment(osdID int, annotations, labels map[string]string) *appsv1.Dep
 	}
 }
 
-func TestValidateAndStartOSDReplacement(t *testing.T) {
+func TestProcessOSDReplacements(t *testing.T) {
 	getDep := func(c *Cluster, osdID int) *appsv1.Deployment {
 		d, err := c.context.Clientset.AppsV1().Deployments("rook-ceph").Get(context.TODO(), fmt.Sprintf(osdAppNameFmt, osdID), metav1.GetOptions{})
 		require.NoError(t, err)
@@ -107,7 +134,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		got := getDep(c, 5)
 		assert.Equal(t, "true", got.Labels[cephv1.SkipReconcileLabelKey])
 		assert.Equal(t, "true", got.Annotations[cephv1.ReplaceInProgressOSDAnnotationKey])
@@ -119,7 +146,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		assert.NotContains(t, getDep(c, 5).Labels, cephv1.SkipReconcileLabelKey)
 		assert.NotContains(t, getDep(c, 5).Annotations, cephv1.ReplaceInProgressOSDAnnotationKey)
 	})
@@ -130,7 +157,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		assert.NotContains(t, getDep(c, 5).Labels, cephv1.SkipReconcileLabelKey)
 		assert.NotContains(t, getDep(c, 5).Annotations, cephv1.ReplaceInProgressOSDAnnotationKey)
 	})
@@ -142,7 +169,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "destroyed"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		got := getDep(c, 5)
 		assert.Equal(t, "true", got.Labels[cephv1.SkipReconcileLabelKey])
 		assert.Equal(t, "true", got.Annotations[cephv1.ReplaceInProgressOSDAnnotationKey])
@@ -153,7 +180,21 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{7: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
+		assert.NotContains(t, getDep(c, 5).Labels, cephv1.SkipReconcileLabelKey)
+		assert.NotContains(t, getDep(c, 5).Annotations, cephv1.ReplaceInProgressOSDAnnotationKey)
+	})
+
+	t.Run("OSD sharing a device with a sibling is rejected and not fenced", func(t *testing.T) {
+		// osdsPerDevice > 1: osd 5 and osd 6 both sit on vdb, so replacement cannot pair the destroyed
+		// slots one-to-one with blank devices.
+		dep := osdDeployment(5, map[string]string{cephv1.ReplaceOSDAnnotationKey: "yes-really-replace-osd-5"}, nil)
+		clientset := fake.NewClientset(dep)
+		c := newReplaceClusterWithTreeAndMetadata(clientset,
+			map[int]string{5: "up", 6: "up"},
+			map[int]string{5: "node-1|vdb", 6: "node-1|vdb"})
+
+		require.NoError(t, c.processOSDReplacements())
 		assert.NotContains(t, getDep(c, 5).Labels, cephv1.SkipReconcileLabelKey)
 		assert.NotContains(t, getDep(c, 5).Annotations, cephv1.ReplaceInProgressOSDAnnotationKey)
 	})
@@ -163,7 +204,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		assert.NotContains(t, getDep(c, 5).Labels, cephv1.SkipReconcileLabelKey)
 	})
 
@@ -175,7 +216,7 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newTestReplaceCluster(clientset)
 		// no executor: an OSD the goroutine already owns must not trigger an osd tree lookup
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		assert.Equal(t, "true", getDep(c, 5).Labels[cephv1.SkipReconcileLabelKey])
 	})
 
@@ -188,9 +229,148 @@ func TestValidateAndStartOSDReplacement(t *testing.T) {
 		clientset := fake.NewClientset(dep)
 		c := newReplaceClusterWithTree(clientset, map[int]string{5: "up"})
 
-		require.NoError(t, c.validateAndStartOSDReplacement())
+		require.NoError(t, c.processOSDReplacements())
 		assert.Equal(t, "true", getDep(c, 5).Annotations[cephv1.ReplaceInProgressOSDAnnotationKey])
 	})
+}
+
+// TestCleanupAbortedReplacement covers the cleanup of a replacement that can never complete: the OSD is
+// gone from the osdmap, so no destroyed slot is left to provision the swapped-in disk into. Driven through
+// processOSDReplacements to cover the wiring, since such a deployment is otherwise skipped there.
+func TestCleanupAbortedReplacement(t *testing.T) {
+	osdID := 5
+	waitingForSwapDep := func() *appsv1.Deployment {
+		d := osdDeployment(osdID, map[string]string{
+			cephv1.ReplaceOSDAnnotationKey:           fmt.Sprintf(cephv1.ReplaceOSDAnnotationValueFmt, osdID),
+			cephv1.ReplaceInProgressOSDAnnotationKey: "true",
+			cephv1.ReadyForSwapOSDAnnotationKey:      "true",
+		}, map[string]string{cephv1.SkipReconcileLabelKey: "true"})
+		zero := int32(0)
+		d.Spec.Replicas = &zero
+		return d
+	}
+
+	// The osd tree must never be fetched for an already-marked deployment, so anything but `osd dump` fails.
+	newCluster := func(clientset *fake.Clientset, inByID map[int]int) *Cluster {
+		c := newTestReplaceCluster(clientset)
+		c.context.Executor = &exectest.MockExecutor{
+			MockExecuteCommandWithOutput: func(command string, args ...string) (string, error) {
+				if len(args) >= 2 && args[0] == "osd" && args[1] == "dump" {
+					return osdDumpJSON(inByID), nil
+				}
+				return "", fmt.Errorf("unexpected ceph command %v", args)
+			},
+		}
+		return c
+	}
+
+	// Only a NotFound counts as deleted; any other error fails the test rather than reading as a
+	// successful cleanup.
+	depExists := func(t *testing.T, c *Cluster) bool {
+		t.Helper()
+		_, err := c.context.Clientset.AppsV1().Deployments("rook-ceph").Get(context.TODO(), fmt.Sprintf(osdAppNameFmt, osdID), metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			return false
+		}
+		require.NoError(t, err)
+		return true
+	}
+
+	t.Run("osd gone from the osdmap deletes the leftover deployment", func(t *testing.T) {
+		c := newCluster(fake.NewClientset(waitingForSwapDep()), map[int]int{7: 1})
+		require.NoError(t, c.processOSDReplacements())
+		assert.False(t, depExists(t, c))
+	})
+
+	t.Run("osd still in the osdmap is left alone", func(t *testing.T) {
+		// The destroyed slot is still waiting for its disk; deleting it here would drop the marker and
+		// the user's ready-for-swap signal mid-replacement.
+		c := newCluster(fake.NewClientset(waitingForSwapDep()), map[int]int{osdID: 0})
+		require.NoError(t, c.processOSDReplacements())
+		assert.True(t, depExists(t, c))
+	})
+
+	t.Run("empty osd dump is not treated as a missing osd", func(t *testing.T) {
+		c := newCluster(fake.NewClientset(waitingForSwapDep()), map[int]int{})
+		require.NoError(t, c.processOSDReplacements())
+		assert.True(t, depExists(t, c))
+	})
+
+	t.Run("osd dump failure leaves the deployment alone", func(t *testing.T) {
+		// Without the dump the OSD's existence cannot be established, so a replacement that may still
+		// be in progress must keep its deployment rather than risk losing the marker.
+		c := newTestReplaceCluster(fake.NewClientset(waitingForSwapDep()))
+		c.context.Executor = &exectest.MockExecutor{
+			MockExecuteCommandWithOutput: func(command string, args ...string) (string, error) {
+				return "", fmt.Errorf("mon is unreachable")
+			},
+		}
+		require.NoError(t, c.processOSDReplacements())
+		assert.True(t, depExists(t, c))
+	})
+}
+
+func TestValidateSingleOSDPerDevice(t *testing.T) {
+	md := func(id int, host, devices string) cephclient.OSDMetadata {
+		return cephclient.OSDMetadata{Id: id, HostName: host, Devices: devices}
+	}
+
+	tests := []struct {
+		name     string
+		metadata []cephclient.OSDMetadata
+		rejected bool
+	}{
+		{
+			name:     "one OSD per device",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", "vdb"), md(6, "node-1", "vdc")},
+		},
+		{
+			// osdsPerDevice > 1: both OSDs are backed by the same disk.
+			name:     "sibling on the same device",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", "vdb"), md(6, "node-1", "vdb")},
+			rejected: true,
+		},
+		{
+			// The same kernel name on two hosts is two different disks.
+			name:     "same device name on another host",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", "vdb"), md(6, "node-2", "vdb")},
+		},
+		{
+			// Siblings sharing a DB device also report their own distinct data disk, so this supported
+			// layout must not be mistaken for osdsPerDevice > 1.
+			name:     "shared metadata device",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", "nvme0n1,vdb"), md(6, "node-1", "nvme0n1,vdc")},
+		},
+		{
+			name:     "shared metadata device and a sibling on the data disk",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", "nvme0n1,vdb"), md(6, "node-1", "nvme0n1,vdb")},
+			rejected: true,
+		},
+		{
+			// Missing or unresolved metadata must not block the request.
+			name:     "target has no metadata",
+			metadata: []cephclient.OSDMetadata{md(6, "node-1", "vdb")},
+		},
+		{
+			name:     "target reports no devices",
+			metadata: []cephclient.OSDMetadata{md(5, "node-1", ""), md(6, "node-1", "")},
+		},
+		{
+			name:     "target reports no hostname",
+			metadata: []cephclient.OSDMetadata{md(5, "", "vdb"), md(6, "", "vdb")},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateSingleOSDPerDevice(5, test.metadata)
+			if test.rejected {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestReplacementReadyToRecreate(t *testing.T) {
