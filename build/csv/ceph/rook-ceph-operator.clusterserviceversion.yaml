@@ -948,6 +948,15 @@ spec:
                 - update
                 - delete
             - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - get
+                - create
+                - update
+                - delete
+            - apiGroups:
                 - ""
               resources:
                 - pods
@@ -1003,6 +1012,7 @@ spec:
               resources:
                 - networkpolicies
               verbs:
+                - get
                 - create
                 - update
                 - delete
