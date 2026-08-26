@@ -15,7 +15,7 @@ metadata:
 spec:
   dataDirHostPath: /var/lib/rook
   cephVersion:
-    image: quay.io/brgardne/ceph:wip-pdonnell-testing-20260718.230903-centos-stream9 # TODO(key): fix before merge
+    image: quay.io/ceph/ceph:v20
     allowUnsupported: true
   security:
     cephx:
