@@ -34,7 +34,7 @@ type AuthListOutput struct {
 	AuthDump []AuthListEntry `json:"auth_dump"`
 }
 
-// AuthListEntry contains only entity field for each user.
+// AuthListEntry contains only the entity field for each user.
 type AuthListEntry struct {
 	Entity string `json:"entity"`
 }
@@ -153,7 +153,7 @@ func AuthRotate(context *clusterd.Context, clusterInfo *ClusterInfo, name, keyTy
 			// `ceph auth rotate` is not yet present in all ceph versions. as long as the command
 			// invocation is correct, EINVAL means the ceph version doesn't have the rotate
 			// subcommand added in: https://github.com/ceph/ceph/pull/58121
-			// all version of ceph v20 (tentacle) and higher should have the command present
+			// all versions of ceph v20 (tentacle) and higher should have the command present
 			return "", errors.Wrapf(err, "failed auth rotate %s. operator or cluster ceph version does not support ceph auth rotate", name)
 		}
 		return "", errors.Wrapf(err, "failed auth rotate %s", name)
@@ -193,7 +193,7 @@ func parseAuthKey(buf []byte) (string, error) {
 	return resp["key"].(string), nil
 }
 
-// AuthList will list all the ceph user.
+// AuthList will list all the ceph users.
 func AuthList(context *clusterd.Context, clusterInfo *ClusterInfo) (AuthListOutput, error) {
 	authArgs := []string{"auth", "ls"}
 	output, err := NewCephCommand(context, clusterInfo, authArgs).Run()

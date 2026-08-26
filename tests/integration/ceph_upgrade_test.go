@@ -88,7 +88,7 @@ func (s *UpgradeSuite) TearDownSuite() {
 func (s *UpgradeSuite) baseSetup(useHelm bool, initialRookVersion string, initialCephVersion v1.CephVersionSpec) {
 	s.namespace = "upgrade"
 	// the suite instance is shared across test methods; a fixture left over
-	// from a previous method must not leak into this one's cleanup routing
+	// from a previous method must not leak into this one's cleanup routine
 	s.objectStore = nil
 	s.settings = &installer.TestCephSettings{
 		ClusterName:                 s.namespace,
@@ -109,11 +109,11 @@ func (s *UpgradeSuite) baseSetup(useHelm bool, initialRookVersion string, initia
 }
 
 func (s *UpgradeSuite) TestUpgradeRook() {
-	s.testUpgrade(false, installer.SquidVersion)
+	s.testUpgrade(false, v1.CephVersionSpec{Image: "quay.io/ceph/ceph:v19.2.5"} /* needed while initial rook version is < v19.2.9 */)
 }
 
 func (s *UpgradeSuite) TestUpgradeHelm() {
-	s.testUpgrade(true, installer.SquidVersion)
+	s.testUpgrade(true, v1.CephVersionSpec{Image: "quay.io/ceph/ceph:v19.2.5"} /* needed while initial rook version is < v19.2.9 */)
 }
 
 func (s *UpgradeSuite) testUpgrade(useHelm bool, initialCephVersion v1.CephVersionSpec) {
@@ -517,6 +517,10 @@ func (s *UpgradeSuite) upgradeToMaster() {
 	// Apply the CRDs for the latest master
 	s.settings.RookVersion = installer.LocalBuildTag
 	s.installer.Manifests = installer.NewCephManifests(s.settings)
+
+	// The previous version does not ship network policies, so apply them now
+	// that the manifests point to master.
+	require.NoError(s.T(), s.installer.CreateNetworkPolicies())
 
 	if s.settings.UseHelm {
 		logger.Info("Requiring msgr2 during helm upgrade to test the port conversion from 6789 to 3300")

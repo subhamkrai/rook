@@ -164,6 +164,9 @@ spec:
   mgr:
     count: ` + strconv.Itoa(mgrCount) + `
     allowMultiplePerNode: true
+    modules:
+      - name: rook
+        enabled: false
   dashboard:
     enabled: true
   network:
@@ -566,7 +569,7 @@ spec:
 `
 }
 
-// GetBucketStorageClass returns the manifest to create object bucket
+// GetBucketStorageClass returns the manifest to create the object bucket storage class
 func (m *CephManifestsMaster) GetBucketStorageClass(storeName, storageClassName, reclaimPolicy string) string {
 	return `apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -579,7 +582,7 @@ parameters:
     objectStoreNamespace: ` + m.settings.Namespace
 }
 
-// GetOBC returns the manifest to create object bucket claim
+// GetOBC returns the manifest to create an object bucket claim
 func (m *CephManifestsMaster) GetOBC(claimName string, storageClassName string, objectBucketName string, maxObject string, varBucketName bool) string {
 	bucketParameter := "generateBucketName"
 	if varBucketName {
@@ -596,7 +599,7 @@ spec:
     maxObjects: "` + maxObject + `"`
 }
 
-// GetBucketTopic returns the manifest to create ceph bucket topic
+// GetBucketTopic returns the manifest to create a ceph bucket topic
 func (m *CephManifestsMaster) GetBucketTopic(topicName string, storeName string, httpEndpointService string) string {
 	return `apiVersion: ceph.rook.io/v1
 kind: CephBucketTopic
