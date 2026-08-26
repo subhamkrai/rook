@@ -263,11 +263,7 @@ func (r *ReconcileCephRBDMirror) reconcile(request reconcile.Request) (reconcile
 		return opcontroller.ImmediateRetryResult, *cephRBDMirror, errors.Wrap(err, "failed to add ceph rbd mirror peer")
 	}
 
-<<<<<<< HEAD
-	// check if cephRBDMirror daemon keys should be rotated or not (
-=======
 	// check if cephRBDMirror daemon keys should be rotated or not
->>>>>>> upstream
 	// daemon key type always takes the default from setDefaultCephxKeyType()
 	r.shouldRotateCephxKeys, err = keyring.ShouldRotateCephxKeys(
 		cephCluster.Spec.Security.CephX.Daemon, *runningCephVersion, *runningCephVersion, cephRBDMirror.Status.Cephx.Daemon, true, r.clusterInfo.Namespace)

@@ -971,11 +971,7 @@ func (c *cluster) deleteBootstrapKeys() {
 }
 
 // Work around ceph bug preventing key rotation at the same time Ceph is being upgraded from
-<<<<<<< HEAD
-// non-AES256K-supporting version to-AES256K-supporting version.
-=======
 // non-AES256K-supporting version to AES256K-supporting version.
->>>>>>> upstream
 // More workaround notes on SetAllowCephxKeyRotationForCluster().
 func (c *cluster) setIsSafeToRotateCephxKeys(imageCephVersion cephver.CephVersion) error {
 	allowedAtStart, definedAtStart := keyring.GetAllowCephxKeyRotationForCluster(c.Namespace)
@@ -988,11 +984,7 @@ func (c *cluster) setIsSafeToRotateCephxKeys(imageCephVersion cephver.CephVersio
 		if definedAtStart && !allowedAtStart {
 			// Rotation allowed is not being newly established here. We should restart to ensure
 			// child reconciles restart. This case shouldn't be encountered but might if the
-<<<<<<< HEAD
-			// CephCluster reconcile restarts after OSD upgrade but before setting setting is-safe.
-=======
 			// CephCluster reconcile restarts after OSD upgrade but before setting is-safe.
->>>>>>> upstream
 			logger.Infof("non-upgrade: restarting rook operator after cephx key rotation is re-enabled for cluster in namespace %q", c.Namespace)
 			reloadManagerFunc()
 			return errors.Wrapf(errOsdUpgradeCephxRotationWorkaroundRestart, "non-upgrade") // context cancel will error anyway, so return err now

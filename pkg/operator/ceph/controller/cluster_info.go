@@ -130,11 +130,7 @@ func CreateOrLoadClusterInfo(clusterdContext *clusterd.Context, context context.
 		if cephClusterSpec.Security.CephX.Daemon.KeyType != "" {
 			// allow users to use the cephx daemon key type config to override the key type used for
 			// bootstrapping the admin and mon keys. There is a chance Rook could make the wrong
-<<<<<<< HEAD
-			// determination when bootstrapping these keys ceph-authtool, and it might be important
-=======
 			// determination when bootstrapping these keys with ceph-authtool, and it might be important
->>>>>>> upstream
 			// for users to override them as a workaround. daemon key creation/rotation after mons
 			// are running is done by the running mons, so no ability to set overrides after initial
 			// bootstrapping is necessary

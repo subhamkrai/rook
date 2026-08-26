@@ -111,7 +111,7 @@ func ReturnCephVersion() cephv1.CephVersionSpec {
 		return UmbrellaVersion
 	default:
 		// Default to the latest stable version
-		return TentacleDevelVersion
+		return TentacleVersion
 	}
 }
 

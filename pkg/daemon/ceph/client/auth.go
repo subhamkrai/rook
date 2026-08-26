@@ -29,12 +29,7 @@ import (
 // KeyTypeFlag is the flag used by some `ceph auth` commands to specify the CephX key (cipher) type
 const KeyTypeFlag = "--key-type"
 
-<<<<<<< HEAD
 // AuthListOutput contains list of ceph user details contains entries, keys.
-=======
-// AuthListOutput is the go representation of `ceph auth ls` output. Only each
-// entry's entity name is captured.
->>>>>>> upstream
 type AuthListOutput struct {
 	AuthDump []AuthListEntry `json:"auth_dump"`
 }
@@ -133,11 +128,7 @@ func Aes256kKeysSupported(ver version.CephVersion) bool {
 	case 19:
 		return ver.IsAtLeast(version.CephVersion{Major: 19, Minor: 2, Extra: 6})
 	case 20:
-<<<<<<< HEAD
 		return ver.IsAtLeast(version.CephVersion{Major: 20, Minor: 2, Extra: 1, Build: 297})
-=======
-		return ver.IsAtLeast(version.CephVersion{Major: 20, Minor: 2, Extra: 4})
->>>>>>> upstream
 	default:
 		return ver.Major >= 21
 	}
