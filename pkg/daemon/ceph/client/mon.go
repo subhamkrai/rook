@@ -73,10 +73,6 @@ type MonDump struct {
 type MonDumpEntry struct {
 	Name string `json:"name"`
 	Rank int    `json:"rank"`
-<<<<<<< HEAD
-	// CrushLocation string `json:"crush_location"`
-=======
->>>>>>> upstream
 }
 
 // GetMonQuorumStatus calls quorum_status mon_command

@@ -144,10 +144,6 @@ func TestMonDump(t *testing.T) {
 	dump, err := GetMonDump(context, clusterInfo)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, dump.ElectionStrategy)
-<<<<<<< HEAD
-	// assert.Equal(t, "{zone=a}", dump.Mons[0].CrushLocation)
-=======
->>>>>>> upstream
 	assert.Equal(t, "a", dump.Mons[0].Name)
 	assert.Equal(t, 0, dump.Mons[0].Rank)
 	assert.Equal(t, "b", dump.Mons[1].Name)
