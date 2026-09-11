@@ -45,9 +45,8 @@ _wait_succeeded() {
 }
 
 # TODO: bump default image tag when a new one is published.
-DRBD_IMAGE="${DRBD_IMAGE:-quay.io/rhceph-dev/odf4-odf-drbd-rhel9:v4.23.0}" # ODF DRBD image (drbdadm + sources)
-# TODO: bump when tarball inside the image changes.
-DRBD_VERSION="${DRBD_VERSION:-9.3.3}"                                   # Must match DRBD source version in DRBD_IMAGE
+DRBD_IMAGE="${DRBD_IMAGE:-quay.io/rhceph-dev/odf4-odf-drbd-rhel9:v5.0}" # ODF DRBD image (drbdadm + sources)
+DRBD_VERSION="${DRBD_VERSION:-}"                                            # Resolved from DRBD_IMAGE (/drbd.version) unless set
 
 DRBD_CONF_PATH="${DRBD_CONF_PATH:-/etc/drbd.conf}"               # Main file: include of ${DRBD_DIR_PATH}/*.res only
 DRBD_DIR_PATH="${DRBD_DIR_PATH:-/etc/drbd.d}"                    # Per-resource .res files (actual DRBD definition)
@@ -331,6 +330,25 @@ detect_nodes() {
     if [[ -z "$NODE_0_IP" || -z "$NODE_1_IP" ]]; then
         die "could not read InternalIP (NODE_0=$NODE_0 NODE_1=$NODE_1)"
     fi
+}
+
+# Read DRBD kernel source version from /drbd.version in DRBD_IMAGE (unless DRBD_VERSION is set).
+resolve_drbd_version() {
+    if [[ -n "$DRBD_VERSION" ]]; then
+        return 0
+    fi
+
+    local version
+    # Pull quietly first; podman run otherwise prints pull progress to stdout and pollutes cat output.
+    version=$(oc debug -q "node/$NODE_0" -- chroot /host bash -c "
+        podman pull -q --authfile /var/lib/kubelet/config.json '${DRBD_IMAGE}' >/dev/null 2>&1 &&
+        podman run --rm --authfile /var/lib/kubelet/config.json '${DRBD_IMAGE}' cat /drbd.version
+    " 2>/dev/null | tr -d '\r\n' || true)
+    if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)+([+-][A-Za-z0-9.-]+)?$ ]]; then
+        die "could not read DRBD version from ${DRBD_IMAGE} (/drbd.version on node ${NODE_0}); set DRBD_VERSION or ensure nodes can pull the image"
+    fi
+    DRBD_VERSION="$version"
+    msg "Resolved DRBD_VERSION ${DRBD_VERSION} from ${DRBD_IMAGE}"
 }
 
 # list block devices on both nodes with lsblk
@@ -1501,6 +1519,7 @@ print_success() {
 }
 
 run_install() {
+    resolve_drbd_version # read /drbd.version from DRBD_IMAGE unless DRBD_VERSION is set
     validate_and_resolve_disks # validate paths and resolve to /dev/disk/by-id
     print_config # print the configuration
     setup_kmm_operator # setup the KMM operator
@@ -1520,6 +1539,7 @@ run_install() {
 
 run_upgrade() {
     validate_and_load_drbd_configure_cm # validate output ConfigMap presence
+    resolve_drbd_version # read /drbd.version from DRBD_IMAGE unless DRBD_VERSION is set
     print_config # print the configuration
     setup_kmm_operator # setup the KMM operator
     setup_image_registry_operator # setup the image registry operator
