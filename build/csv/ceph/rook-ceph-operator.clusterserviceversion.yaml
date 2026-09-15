@@ -354,6 +354,7 @@ spec:
                 - get
                 - list
                 - watch
+                - patch
             - apiGroups:
                 - ""
                 - discovery.k8s.io
@@ -429,6 +430,7 @@ spec:
                 - list
                 - watch
                 - update
+                - patch
             - apiGroups:
                 - ceph.rook.io
               resources:
