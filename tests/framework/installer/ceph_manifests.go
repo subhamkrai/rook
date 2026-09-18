@@ -66,7 +66,7 @@ func NewCephManifests(settings *TestCephSettings) CephManifests {
 	switch settings.RookVersion {
 	case LocalBuildTag:
 		return &CephManifestsMaster{settings}
-	case Version1_19:
+	case Version1_20:
 		return &CephManifestsPreviousVersion{settings, &CephManifestsMaster{settings}}
 	}
 	panic(fmt.Errorf("unrecognized ceph manifest version: %s", settings.RookVersion))
@@ -191,6 +191,11 @@ spec:
     global:
       mon_data_avail_warn: "10"
       rgw_allow_notification_secrets_in_cleartext: "true"
+  security:
+    cephx:
+      csi:
+        # keep the old aes key type when the host kernel does not yet support aes256k
+        keyType: aes
   healthCheck:
     daemonHealth:
       mon:
@@ -256,18 +261,6 @@ spec:
     cephfs:
       kernelMountOptions: ms_mode=secure
   `
-	}
-
-	if m.settings.RookVersion != Version1_19 {
-		// set CSI cephx key version to aes for compatibility
-		// to support upgrading from old version, ensure this isn't added when using old rook
-		clusterSpec += `
-  security:
-    cephx:
-      csi:
-        # keep the old aes key type when the host kernel does not yet support aes256k
-        keyType: aes
-`
 	}
 
 	return clusterSpec + `
